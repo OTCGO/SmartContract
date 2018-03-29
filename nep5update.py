@@ -28,6 +28,7 @@ from boa.interop.Neo.Runtime import Log, GetTrigger, CheckWitness
 from boa.interop.Neo.Action import RegisterAction
 from boa.interop.Neo.TriggerType import Application, Verification
 from boa.interop.Neo.Storage import GetContext, Get, Put, Delete
+from boa.interop.System.ExecutionEngine import GetScriptContainer, GetExecutingScriptHash
 from boa.builtins import concat
 
 # -------------------------------------------
@@ -57,6 +58,9 @@ TOTAL_SUPPLY = 100000000000000000
 DispatchTransferEvent = RegisterAction('transfer', 'from', 'to', 'amount')
 
 DispatchApproveEvent = RegisterAction('approval', 'owner', 'spender', 'value')
+
+
+ctx = GetContext()
 
 
 def Main(operation, args):
@@ -153,8 +157,12 @@ def Main(operation, args):
             return False
 
         elif operation == 'deploy':
-            dp = DoDeploy()
+            dp = DoDeploy(ctx)
             return dp
+
+        elif operation == 'mintTokens':
+           mt = MintTokens(ctx) 
+           return mt
 
         result = 'unknown operation'
 
@@ -163,16 +171,59 @@ def Main(operation, args):
     return False
 
 
-def DoDeploy():
+def MintTokens(ctx):
+    """
+    """
+    infos = GetMintInfo(ctx)
+    if infos[2] > 0:
+        current_balance = Get(ctx, infos[1])
+        amount = infos[2] * 100000000
+        new_total = current_balance + amount
+        Put(ctx, infos[1], new_total)
+        my_balance = Get(ctx, infos[0])
+        my_new_total = my_balance - amount
+        Put(ctx, infos[0], my_new_total)
+        return True
+    return False
+
+
+def GetMintInfo(ctx):
+    """
+    Gets information about acception coin attached to an invocation TX
+
+    :return:
+        list: A list with information about attached the acception coin
+    ref:https://github.com/CityOfZion/neo-boa/blob/master/boa_test/example/demo/nex/txio.py
+    """
+
+    tx = GetScriptContainer()
+    references = tx.References
+    receiver_addr = GetExecutingScriptHash()
+    sender_addr = None
+    sent_amount_ac = 0
+    ac = Get(ctx, "ACCEPTCOIN")
+    if len(ac) == 32:
+        if len(references) > 0:
+            reference = references[0]
+            sender_addr = reference.ScriptHash
+            for output in tx.Outputs:
+                if output.ScriptHash == receiver_addr:
+                    if output.AssetId == ac:
+                        sent_amount_ac += output.Value
+
+    return [receiver_addr, sender_addr, sent_amount_ac]
+
+
+def DoDeploy(ctx):
     """
     Method to init totalSupply tokens to OWNER
     """
-    context = GetContext()
-    result = Get(context, "DEPLOY")
+    result = Get(ctx, "DEPLOY")
     if result == 1:
         return False
     Put(context, "DEPLOY", 1)
-    Put(context, OWNER, TOTAL_SUPPLY)
+    my_script_hash = GetExecutingScriptHash()
+    Put(context, my_script_hash, TOTAL_SUPPLY)
     return True
 
 
