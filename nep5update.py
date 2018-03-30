@@ -157,8 +157,11 @@ def Main(operation, args):
             return False
 
         elif operation == 'deploy':
-            dp = DoDeploy(ctx)
-            return dp
+            if len(args) == 1:
+                accept_coin = args[0]
+                dp = DoDeploy(ctx, accept_coin)
+                return dp
+            return False
 
         elif operation == 'mintTokens':
            mt = MintTokens(ctx) 
@@ -173,6 +176,7 @@ def Main(operation, args):
 
 def MintTokens(ctx):
     """
+    MintTokens
     """
     infos = GetMintInfo(ctx)
     if infos[2] > 0:
@@ -214,16 +218,17 @@ def GetMintInfo(ctx):
     return [receiver_addr, sender_addr, sent_amount_ac]
 
 
-def DoDeploy(ctx):
+def DoDeploy(ctx, accept_coin):
     """
     Method to init totalSupply tokens to OWNER
     """
     result = Get(ctx, "DEPLOY")
     if result == 1:
         return False
-    Put(context, "DEPLOY", 1)
-    my_script_hash = GetExecutingScriptHash()
-    Put(context, my_script_hash, TOTAL_SUPPLY)
+    me = GetExecutingScriptHash()
+    Put(ctx, "DEPLOY", 1)
+    Put(ctx, me, TOTAL_SUPPLY)
+    Put(ctx, "ACCEPTCOIN", accept_coin)
     return True
 
 
