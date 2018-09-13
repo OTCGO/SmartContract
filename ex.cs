@@ -17,7 +17,7 @@ namespace Neo.SmartContract
         
         public static bool Main(byte[] owner, byte[] tokenSR, byte[] tokenBR, byte[] price)
         {
-			if (owner.Length != LENGTH_OF_SCRIPTHASH || tokenSR.Length != LENGTH_OF_SCRIPTHASH || tokenBR.Length != LENGTH_OF_SCRIPTHASH || price.Length != LENGTH_OF_PRICE) return false;
+            if (owner.Length != LENGTH_OF_SCRIPTHASH || tokenSR.Length != LENGTH_OF_SCRIPTHASH || tokenBR.Length != LENGTH_OF_SCRIPTHASH || price.Length != LENGTH_OF_PRICE) return false;
             if (!CheckTx(owner, tokenSR, tokenBR, price)) return false;
             return true;
         }
