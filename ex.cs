@@ -86,7 +86,7 @@ namespace Neo.SmartContract
                 var balanceArgs = new object[] { fromS };
                 var balanceContract = (NEP5Contract)tokenSR.ToDelegate();
                 BigInteger balanceResult = (BigInteger)balanceContract("balanceOf", balanceArgs);
-                if (amountS < balanceResult) return false;
+                if (amountS > balanceResult) return false;
                 
                 return true;
             }
