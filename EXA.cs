@@ -14,11 +14,17 @@ namespace Neo.SmartContract
         
         public static bool Main(byte[] tokenA, byte[] fromA, byte[] toA, byte[] amountA, byte[] tokenB, byte[] fromB, byte[] toB, byte[] amountB)
         {
+            var magicstr = "2018-09-15 21:10";
+
             if (tokenA.Length != LENGTH_OF_SCRIPTHASH || tokenB.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (fromA.Length != LENGTH_OF_SCRIPTHASH || fromB.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (toA.Length != LENGTH_OF_SCRIPTHASH || toB.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (amountA.Length != LENGTH_OF_AMOUNT || amountA.AsBigInteger() <= 0) return false;
             if (amountB.Length != LENGTH_OF_AMOUNT || amountB.AsBigInteger() <= 0) return false;
+            //if (tokenA == tokenB) return false;
+            //if (fromA == fromB) return false;
+            //if (fromA == toA) return false;
+            //if (fromB == toB) return false;
             
             if (!Runtime.CheckWitness(fromA)) return false;
             if (!Runtime.CheckWitness(fromB)) return false;
