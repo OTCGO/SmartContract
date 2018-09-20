@@ -12,16 +12,16 @@ namespace Neo.SmartContract
         private const int LENGTH_OF_AMOUNT = 8;
         public delegate object NEP5Contract(string method, object[] args);
         
-        public static bool Main(byte[] tokenA, byte[] fromA, byte[] toA, byte[] amountA, byte[] tokenB, byte[] fromB, byte[] toB, byte[] amountB)
+        public static bool Main(byte[] tokenAR, byte[] fromA, byte[] toA, byte[] amountA, byte[] tokenBR, byte[] fromB, byte[] toB, byte[] amountB)
         {
-            var magicstr = "2018-09-15 21:10";
+            var magicstr = "2018-09-20 21:58";
 
-            if (tokenA.Length != LENGTH_OF_SCRIPTHASH || tokenB.Length != LENGTH_OF_SCRIPTHASH) return false;
+            if (tokenAR.Length != LENGTH_OF_SCRIPTHASH || tokenBR.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (fromA.Length != LENGTH_OF_SCRIPTHASH || fromB.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (toA.Length != LENGTH_OF_SCRIPTHASH || toB.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (amountA.Length != LENGTH_OF_AMOUNT || amountA.AsBigInteger() <= 0) return false;
             if (amountB.Length != LENGTH_OF_AMOUNT || amountB.AsBigInteger() <= 0) return false;
-            //if (tokenA == tokenB) return false;
+            //if (tokenAR == tokenBR) return false;
             //if (fromA == fromB) return false;
             //if (fromA == toA) return false;
             //if (fromB == toB) return false;
@@ -30,21 +30,23 @@ namespace Neo.SmartContract
             if (!Runtime.CheckWitness(fromB)) return false;
             
             var balanceArgsA = new object[] { fromA };
-            var contractA = (NEP5Contract)tokenA.ToDelegate();
+            var contractA = (NEP5Contract)tokenAR.ToDelegate();
             BigInteger balanceResultA = (BigInteger)contractA("balanceOf", balanceArgsA);
             if (amountA.AsBigInteger() > balanceResultA) return false;
 
             var balanceArgsB = new object[] { fromB };
-            var contractB = (NEP5Contract)tokenB.ToDelegate();
+            var contractB = (NEP5Contract)tokenBR.ToDelegate();
             BigInteger balanceResultB = (BigInteger)contractB("balanceOf", balanceArgsB);
             if (amountB.AsBigInteger() > balanceResultB) return false;
             
             var argsA = new object[] { fromA, toA, amountA };
-            bool resultA = (bool)contractA("transfer", argsA);
+            var contractC = (NEP5Contract)tokenAR.ToDelegate();
+            bool resultA = (bool)contractC("transfer", argsA);
             if (!resultA) return false;
             
             var argsB = new object[] { fromB, toB, amountB };
-            bool resultB = (bool)contractB("transfer", argsB);
+            var contractD = (NEP5Contract)tokenBR.ToDelegate();
+            bool resultB = (bool)contractD("transfer", argsB);
             if (!resultB) return false;
             
             return true;
