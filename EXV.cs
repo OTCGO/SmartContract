@@ -11,7 +11,6 @@ namespace Neo.SmartContract
         private const int LENGTH_OF_SCRIPTHASH = 20;
         private const int LENGTH_OF_AMOUNT = 8;
         private const int LENGTH_OF_PRICE = 8;
-        public delegate object NEP5Contract(string method, object[] args);
         
         public static bool Main(byte[] owner, byte[] tokenSR, byte[] tokenBR, byte[] price)
         {
@@ -81,13 +80,10 @@ namespace Neo.SmartContract
                 }
                 if (amountS <= 0 || amountB <= 0) return false;
                 if (toS == null || toB == null || fromS == null || fromB == null) return false;
-                if (owner != toB || ExecutionEngine.ExecutingScriptHash.AsBigInteger() != fromS.AsBigInteger()) return false;
-                if (amountS * 100000000 > amountB * price.AsBigInteger()) return false;
-                
-                var balanceArgs = new object[] { fromS };
-                var balanceContract = (NEP5Contract)tokenSR.ToDelegate();
-                BigInteger balanceResult = (BigInteger)balanceContract("balanceOf", balanceArgs);
-                if (amountS > balanceResult) return false;
+                if (owner != toB) return false;
+                if (!fromS.Equals(ExecutionEngine.EntryScriptHash)) return false;
+                BigInteger biPrice = price.AsBigInteger();
+                if (amountS * 100000000 > amountB * biPrice) return false;
                 
                 return true;
             }
