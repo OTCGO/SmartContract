@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Neo.SmartContract
 {
-    public class SEAS: Framework.SmartContract
+    public class SEAS : Framework.SmartContract
     {
         //Token Settings
         public static string Name() => "Share of SEA";
@@ -18,19 +18,18 @@ namespace Neo.SmartContract
         private const ulong neo_decimals = 100000000;
         private const uint bonus_start_height = 2000000;
         private const uint bonus_end_height = 17000000;//bonus_start_height + 1500 0000
-        private static readonly byte[] BONUS_BASIC = “BS-”.AsByteArray();
-        private static readonly byte[] SEAC_CONTRACT = “SEAC”.AsByteArray();
+        private static readonly byte[] BONUS_BASIC = "BS-".AsByteArray();
+        private static readonly byte[] SEAC_CONTRACT = "SEAC".AsByteArray();
         public delegate object NEP5Contract(string method, object[] args);
+        private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
 
         //ICO Settings
-        private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };
+        private static readonly byte[] gseas_asset_id = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
+        //private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
         private const ulong total_amount = 100000000 * factor; // total token amount
 
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
-
-        [DisplayName("refund")]
-        public static event Action<byte[], BigInteger> Refund;
 
         [DisplayName("bonusshare")]
         public static event Action<byte[], BigInteger> BonusShared;
@@ -39,21 +38,23 @@ namespace Neo.SmartContract
         {
             if (Runtime.Trigger == TriggerType.Verification)
             {
-                if (Owner.Length == 20)
-                {
-                    // if param Owner is script hash
-                    return Runtime.CheckWitness(Owner);
-                }
-                else if (Owner.Length == 33)
-                {
-                    // if param Owner is public key
-                    byte[] signature = operation.AsByteArray();
-                    return VerifySignature(signature, Owner);
-                }
+                Transaction tx = (Transaction)ExecutionEngine.ScriptContainer;
+                var type = tx.Type;
+                if (type != INVOCATION_TRANSACTION_TYPE) return false;
+                bool result = CheckSender();
+                if (!result) return false;
+                ulong contribute_value = GetContributeValue();
+                if (contribute_value == 0) return false;
+                return true;
             }
             else if (Runtime.Trigger == TriggerType.Application)
             {
-                if (operation == "deploy") return Deploy();
+                if (operation == "deploy")
+                {
+                    if (args.Length != 1) return false;
+                    byte[] contract = (byte[])args[0];
+                    return Deploy(contract);
+                }
                 if (operation == "mintTokens") return MintTokens();
                 if (operation == "totalSupply") return TotalSupply();
                 if (operation == "name") return Name();
@@ -81,8 +82,8 @@ namespace Neo.SmartContract
         // 初始化参数
         public static bool Deploy(byte[] contract)
         {
-	    if (contract.Length != 20) return false;
-	    if (!Runtime.CheckWitness(Owner)) return false;
+            if (contract.Length != 20) return false;
+            if (!Runtime.CheckWitness(Owner)) return false;
             byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             if (seac_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAC_CONTRACT, contract);
@@ -120,24 +121,6 @@ namespace Neo.SmartContract
 
         // function that is always called when someone wants to transfer tokens.
         // 流转token调用
-        public static bool Transfer(byte[] from, byte[] to, BigInteger value)
-        {
-            if (value <= 0) return false;
-            if (!Runtime.CheckWitness(from)) return false;
-            if (to.Length != 20) return false;
-            
-            BigInteger from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
-            if (from_value < value) return false;
-            if (from == to) return true;
-            if (from_value == value)
-                Storage.Delete(Storage.CurrentContext, from);
-            else
-                Storage.Put(Storage.CurrentContext, from, from_value - value);
-            BigInteger to_value = Storage.Get(Storage.CurrentContext, to).AsBigInteger();
-            Storage.Put(Storage.CurrentContext, to, to_value + value);
-            Transferred(from, to, value);
-            return true;
-        }
         public static bool Transfer(byte[] from, byte[] to, BigInteger value)
         {
             if (from.Length != 20) return false;
@@ -186,20 +169,20 @@ namespace Neo.SmartContract
             if (current_height <= bonus_start_height) return 0;
             BigInteger start_height = 0;
             byte[] start_bonus = Storage.Get(Storage.CurrentContext, BONUS_BASIC.Concat(addr));
-                if (start_bonus.Length != 0) start_height = start_bonus.AsBigInteger();
+            if (start_bonus.Length != 0) start_height = start_bonus.AsBigInteger();
             if (start_height < bonus_start_height) start_height = bonus_start_height;
             if (start_height >= bonus_end_height) return 0;
             if (current_height > bonus_end_height) current_height = bonus_end_height;
-            BigInteger b = (current_height - start_height)*6*(value - value%100000000)/100000000;
+            BigInteger b = (current_height - start_height) * 6 * (value - value % 100000000) / 100000000;
             return b;
         }
 
         public static bool ShareBonus(byte[] addr, BigInteger value)
-        {       
+        {
             byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             var bonus_args = new object[] { addr, value };
             var contract = (NEP5Contract)seac_contract.ToDelegate();
-            bool result = (bool)contract(“bonus”, bonus_args);
+            bool result = (bool)contract("bonus", bonus_args);
             return result;
         }
 
@@ -220,7 +203,24 @@ namespace Neo.SmartContract
             {
                 if (output.AssetId == gseas_asset_id) return output.ScriptHash;
             }
-            return new byte[]{};
+            return new byte[] { };
+        }
+
+        private static bool CheckSender()
+        {
+            Transaction tx = (Transaction)ExecutionEngine.ScriptContainer;
+            TransactionOutput[] reference = tx.GetReferences();
+            ulong count = 0;
+            foreach (TransactionOutput output in reference)
+            {
+                if (output.AssetId == gseas_asset_id)
+                {
+                    if (output.ScriptHash == GetReceiver()) return false;
+                    count += 1;
+                }
+            }
+            if (count != 1) return false;
+            return true;
         }
 
         // get smart contract script hash
