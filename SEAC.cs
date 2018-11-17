@@ -15,7 +15,6 @@ namespace Neo.SmartContract
         public static readonly byte[] Owner = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         public static byte Decimals() => 8;
         private const ulong factor = 100000000; //decided by Decimals()
-        private static readonly byte[] BONUS_BASIC = "BS-".AsByteArray();
         private static readonly byte[] SEAS_CONTRACT = "SEAS".AsByteArray();
         public delegate object NEP5Contract(string method, object[] args);
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
