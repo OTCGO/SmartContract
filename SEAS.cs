@@ -15,7 +15,6 @@ namespace Neo.SmartContract
         public static readonly byte[] Owner = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         public static byte Decimals() => 8;
         private const ulong factor = 100000000; //decided by Decimals()
-        private const ulong neo_decimals = 100000000;
         private const uint bonus_start_height = 2000000;
         private const uint bonus_end_height = 17000000;//bonus_start_height + 1500 0000
         private static readonly byte[] BONUS_BASIC = "BS-".AsByteArray();
@@ -24,9 +23,10 @@ namespace Neo.SmartContract
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
 
         //ICO Settings
+        private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
         private static readonly byte[] gseas_asset_id = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
         //private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
-        private const ulong total_amount = 100000000 * factor; // total token amount
+        //private const ulong total_amount = 100000000 * factor; // total token amount
 
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
@@ -94,18 +94,11 @@ namespace Neo.SmartContract
         public static bool MintTokens()
         {
             byte[] sender = GetSender();
-            if (sender.Length == 0)
-            {
-                return false;
-            }
-            ulong contribute_value = GetContributeValue();
-            ulong token = contribute_value;
-            if (token == 0)
-            {
-                return false;
-            }
-            BigInteger balance = Storage.Get(Storage.CurrentContext, sender).AsBigInteger();
-            Storage.Put(Storage.CurrentContext, sender, token + balance);
+            if (sender.Length != 20) return false;
+            BigInteger token = (BigInteger)GetContributeValue();
+            if (token <= 0) return false;
+            bool result = Transfer(GOD, sender, token);
+            if (!result) return false;
             BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
             Storage.Put(Storage.CurrentContext, "totalSupply", token + totalSupply);
             Transferred(null, sender, token);
@@ -126,16 +119,24 @@ namespace Neo.SmartContract
             if (from.Length != 20) return false;
             if (to.Length != 20) return false;
             if (value <= 0) return false;
-            if (!Runtime.CheckWitness(from)) return false;
 
             BigInteger current_height = Blockchain.GetHeight();
-
-            BigInteger from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
-            if (from_value < value) return false;
-            BigInteger from_bonus = ComputeBonus(current_height, from, from_value);
-
+            BigInteger from_value = 0;
+            BigInteger from_bonus = 0;
             BigInteger to_value = Storage.Get(Storage.CurrentContext, to).AsBigInteger();
             BigInteger to_bonus = 0;
+
+            if (from == GOD)
+            {
+                if (!Runtime.CheckWitness(to)) return false;
+            } else {
+                if (!Runtime.CheckWitness(from)) return false;
+
+                from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
+                if (from_value < value) return false;
+                from_bonus = ComputeBonus(current_height, from, from_value);
+            }
+
             if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value);
 
             if (from_bonus > 0)
@@ -152,14 +153,22 @@ namespace Neo.SmartContract
                 BonusShared(to, to_bonus);
             }
 
-            Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(from), current_height);
-            Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(to), current_height);
-
-            if (from_value == value)
-                Storage.Delete(Storage.CurrentContext, from);
-            else
-                Storage.Put(Storage.CurrentContext, from, from_value - value);
-            Storage.Put(Storage.CurrentContext, to, to_value + value);
+            if(from == GOD)
+            {
+                Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(to), current_height);
+                Storage.Put(Storage.CurrentContext, to, to_value + value);
+            } else {
+                Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(from), current_height);
+                if (from != to)
+                {
+                    if (from_value == value)
+                        Storage.Delete(Storage.CurrentContext, from);
+                    else
+                        Storage.Put(Storage.CurrentContext, from, from_value - value);
+                    Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(to), current_height);
+                    Storage.Put(Storage.CurrentContext, to, to_value + value);
+                }
+            }
             Transferred(from, to, value);
             return true;
         }
@@ -173,7 +182,7 @@ namespace Neo.SmartContract
             if (start_height < bonus_start_height) start_height = bonus_start_height;
             if (start_height >= bonus_end_height) return 0;
             if (current_height > bonus_end_height) current_height = bonus_end_height;
-            BigInteger b = (current_height - start_height) * 6 * (value - value % 100000000) / 100000000;
+            BigInteger b = (current_height - start_height) * 6 * (value - value % factor) / 10000000;
             return b;
         }
 
