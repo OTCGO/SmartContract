@@ -10,11 +10,11 @@ namespace Neo.SmartContract
     public class SEAS : Framework.SmartContract
     {
         //Token Settings
-        public static string Name() => "Share of SEA";
+        public static string Name() => "Shares of SEA";
         public static string Symbol() => "SEAS";
         public static readonly byte[] Owner = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
-        public static byte Decimals() => 8;
-        private const ulong factor = 100000000; //decided by Decimals()
+        public static byte Decimals() => 0;
+        private const ulong factor = 1; //decided by Decimals()
         private const uint bonus_start_height = 2000000;
         private const uint bonus_end_height = 17000000;//bonus_start_height + 1500 0000
         private static readonly byte[] BONUS_BASIC = "BS-".AsByteArray();
@@ -97,11 +97,12 @@ namespace Neo.SmartContract
             if (sender.Length != 20) return false;
             BigInteger token = (BigInteger)GetContributeValue();
             if (token <= 0) return false;
-            bool result = Transfer(GOD, sender, token);
+            BigInteger transfer_value = token / 100000000;
+            bool result = Transfer(GOD, sender, transfer_value);
             if (!result) return false;
             BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
             Storage.Put(Storage.CurrentContext, "totalSupply", token + totalSupply);
-            Transferred(null, sender, token);
+            Transferred(GOD, sender, token);
             return true;
         }
 
@@ -182,7 +183,7 @@ namespace Neo.SmartContract
             if (start_height < bonus_start_height) start_height = bonus_start_height;
             if (start_height >= bonus_end_height) return 0;
             if (current_height > bonus_end_height) current_height = bonus_end_height;
-            BigInteger b = (current_height - start_height) * 6 * (value - value % factor) / 10000000;
+            BigInteger b = (current_height - start_height) * 6 * value;
             return b;
         }
 
@@ -202,7 +203,7 @@ namespace Neo.SmartContract
             return Storage.Get(Storage.CurrentContext, address).AsBigInteger();
         }
 
-        // check whether asset is neo and get sender script hash
+        // check whether asset is gseas and get sender script hash
         private static byte[] GetSender()
         {
             Transaction tx = (Transaction)ExecutionEngine.ScriptContainer;
