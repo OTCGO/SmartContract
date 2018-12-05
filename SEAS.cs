@@ -101,8 +101,7 @@ namespace Neo.SmartContract
             bool result = Transfer(GOD, sender, transfer_value);
             if (!result) return false;
             BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
-            Storage.Put(Storage.CurrentContext, "totalSupply", token + totalSupply);
-            Transferred(GOD, sender, token);
+            Storage.Put(Storage.CurrentContext, "totalSupply", transfer_value + totalSupply);
             return true;
         }
 
