@@ -20,6 +20,7 @@ namespace Neo.SmartContract
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
 
         //ICO Settings
+        private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
         private static readonly byte[] gseac_asset_id = { 193, 234, 114, 196, 147, 225, 180, 208, 206, 208, 202, 129, 101, 209, 8, 45, 157, 22, 150, 60, 219, 26, 192, 111, 225, 22, 231, 202, 220, 64, 52, 225 };//testnet
         //private static readonly byte[] gseac_asset_id = { 63, 166, 52, 213, 43, 133, 21, 182, 236, 78, 146, 203, 95, 72, 194, 43, 76, 11, 5, 92, 99, 76, 169, 18, 35, 221, 194, 182, 153, 62, 46, 165 };//mainnet
         //private const ulong total_amount = 100000000 * factor; // total token amount
@@ -110,7 +111,7 @@ namespace Neo.SmartContract
             Storage.Put(Storage.CurrentContext, sender, token + balance);
             BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
             Storage.Put(Storage.CurrentContext, "totalSupply", token + totalSupply);
-            Transferred(null, sender, token);
+            Transferred(GOD, sender, token);
             return true;
         }
 
