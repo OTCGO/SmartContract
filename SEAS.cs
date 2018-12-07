@@ -84,8 +84,8 @@ namespace Neo.SmartContract
         {
             if (contract.Length != 20) return false;
             if (!Runtime.CheckWitness(Owner)) return false;
-            byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
-            if (seac_contract.Length != 0) return false;
+            //byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
+            //if (seac_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAC_CONTRACT, contract);
             Storage.Put(Storage.CurrentContext, "totalSupply", 0);
             return true;
