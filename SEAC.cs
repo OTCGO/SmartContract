@@ -72,7 +72,8 @@ namespace Neo.SmartContract
                     if (args.Length !=2) return false;
                     byte[] addr = (byte[])args[0];
                     BigInteger value = (BigInteger)args[1];
-                    return Bonus(addr, value);
+                    byte[] callscript = ExecutionEngine.CallingScriptHash;
+                    return Bonus(addr, value, callscript);
                 }
             }
             return false;
@@ -200,12 +201,12 @@ namespace Neo.SmartContract
             return value;
         }
 
-        private static bool Bonus(byte[] addr, BigInteger value)
+        private static bool Bonus(byte[] addr, BigInteger value, byte[] callscript)
         {
             if (addr.Length != 20) return false;
             if (value <= 0) return false;
             byte[] seas_contract = Storage.Get(Storage.CurrentContext, SEAS_CONTRACT);
-            if (seas_contract != ExecutionEngine.CallingScriptHash) return false;
+            if (seas_contract != callscript) return false;
             BigInteger balance = Storage.Get(Storage.CurrentContext, addr).AsBigInteger();
             Storage.Put(Storage.CurrentContext, addr, value + balance);
             Transferred(GOD, addr, value);
