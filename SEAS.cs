@@ -26,13 +26,10 @@ namespace Neo.SmartContract
         private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
         private static readonly byte[] gseas_asset_id = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
         //private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
-        //private const ulong total_amount = 100000000 * factor; // total token amount
+        private const ulong total_amount = 100000000 * factor; // total token amount
 
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
-
-        [DisplayName("bonusshare")]
-        public static event Action<byte[], BigInteger> BonusShared;
 
         public static Object Main(string operation, params object[] args)
         {
@@ -87,7 +84,7 @@ namespace Neo.SmartContract
             //byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             //if (seac_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAC_CONTRACT, contract);
-            Storage.Put(Storage.CurrentContext, "totalSupply", 0);
+            Storage.Put(Storage.CurrentContext, "totalSupply", total_amount);
             return true;
         }
 
@@ -100,8 +97,6 @@ namespace Neo.SmartContract
             BigInteger transfer_value = token / 100000000;
             bool result = Transfer(GOD, sender, transfer_value);
             if (!result) return false;
-            BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
-            Storage.Put(Storage.CurrentContext, "totalSupply", transfer_value + totalSupply);
             return true;
         }
 
@@ -143,14 +138,12 @@ namespace Neo.SmartContract
             {
                 bool result = ShareBonus(from, from_bonus);
                 if (!result) return false;
-                BonusShared(from, from_bonus);
             }
 
             if (to_bonus > 0)
             {
                 bool result = ShareBonus(to, to_bonus);
                 if (!result) return false;
-                BonusShared(to, to_bonus);
             }
 
             if(from == GOD)
