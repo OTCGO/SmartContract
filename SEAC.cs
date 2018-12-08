@@ -23,13 +23,10 @@ namespace Neo.SmartContract
         private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
         private static readonly byte[] gseac_asset_id = { 193, 234, 114, 196, 147, 225, 180, 208, 206, 208, 202, 129, 101, 209, 8, 45, 157, 22, 150, 60, 219, 26, 192, 111, 225, 22, 231, 202, 220, 64, 52, 225 };//testnet
         //private static readonly byte[] gseac_asset_id = { 63, 166, 52, 213, 43, 133, 21, 182, 236, 78, 146, 203, 95, 72, 194, 43, 76, 11, 5, 92, 99, 76, 169, 18, 35, 221, 194, 182, 153, 62, 46, 165 };//mainnet
-        //private const ulong total_amount = 100000000 * factor; // total token amount
+        private const ulong total_amount = 100000000 * factor; // total token amount
 
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
-
-        [DisplayName("bonusshare")]
-        public static event Action<byte[], BigInteger> BonusShared;
 
         public static Object Main(string operation, params object[] args)
         {
@@ -90,7 +87,7 @@ namespace Neo.SmartContract
             byte[] seas_contract = Storage.Get(Storage.CurrentContext, SEAS_CONTRACT);
             if (seas_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAS_CONTRACT, contract);
-            Storage.Put(Storage.CurrentContext, "totalSupply", 0);
+            Storage.Put(Storage.CurrentContext, "totalSupply", total_amount);
             return true;
         }
 
@@ -109,8 +106,6 @@ namespace Neo.SmartContract
             }
             BigInteger balance = Storage.Get(Storage.CurrentContext, sender).AsBigInteger();
             Storage.Put(Storage.CurrentContext, sender, token + balance);
-            BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
-            Storage.Put(Storage.CurrentContext, "totalSupply", token + totalSupply);
             Transferred(GOD, sender, token);
             return true;
         }
@@ -213,9 +208,7 @@ namespace Neo.SmartContract
             if (seas_contract != ExecutionEngine.CallingScriptHash) return false;
             BigInteger balance = Storage.Get(Storage.CurrentContext, addr).AsBigInteger();
             Storage.Put(Storage.CurrentContext, addr, value + balance);
-            BigInteger totalSupply = Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
-            Storage.Put(Storage.CurrentContext, "totalSupply", value + totalSupply);
-            BonusShared(addr, value);
+            Transferred(GOD, addr, value);
             return true;
 
         }
