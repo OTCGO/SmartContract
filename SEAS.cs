@@ -1,6 +1,7 @@
 using Neo.SmartContract.Framework;
 using Neo.SmartContract.Framework.Services.Neo;
 using Neo.SmartContract.Framework.Services.System;
+using Helper = Neo.SmartContract.Framework.Helper;
 using System;
 using System.ComponentModel;
 using System.Numerics;
@@ -17,7 +18,6 @@ namespace Neo.SmartContract
         private const ulong factor = 1; //decided by Decimals()
         private const uint bonus_start_height = 2000000;
         private const uint bonus_end_height = 17000000;//bonus_start_height + 1500 0000
-        private static readonly byte[] BONUS_BASIC = "BS-".AsByteArray();
         private static readonly byte[] SEAC_CONTRACT = "SEAC".AsByteArray();
         public delegate object NEP5Contract(string method, object[] args);
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
@@ -88,6 +88,32 @@ namespace Neo.SmartContract
             return true;
         }
 
+        private static AssetInfo GetAssetInfo(byte[] address)
+        {
+            if (address.Length != 20)
+                throw new InvalidOperationException("The parameter address SHOULD be 20-byte addresses.");
+            StorageMap assetInfo = Storage.CurrentContext.CreateMap(nameof(assetInfo));
+            var result = assetInfo.Get(address); //0.1
+            if (result.Length == 0) return null;
+            return Helper.Deserialize(result) as AssetInfo;
+        }
+
+        private static void SetAssetInfo(byte[] address, BigInteger balance, BigInteger height)
+        {
+            StorageMap assetInfo = Storage.CurrentContext.CreateMap(nameof(assetInfo));
+			if (balance <= 0)
+			{
+				assetInfo.Delete(address); //0.1
+			} else {
+				AssetInfo info = new AssetInfo
+				{
+					balance = balance,
+					height = height 
+				};
+				assetInfo.Put(address, Helper.Serialize(info)); //1
+			}
+        }
+
         public static bool MintTokens()
         {
             byte[] sender = GetSender();
@@ -114,12 +140,23 @@ namespace Neo.SmartContract
             if (from.Length != 20) return false;
             if (to.Length != 20) return false;
             if (value <= 0) return false;
+            byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
+            if (seac_contract.Length != 20) return false;
 
             BigInteger current_height = Blockchain.GetHeight();
             BigInteger from_value = 0;
             BigInteger from_bonus = 0;
-            BigInteger to_value = Storage.Get(Storage.CurrentContext, to).AsBigInteger();
+			BigInteger from_bonus_height = 0;
+            BigInteger to_value = 0;
             BigInteger to_bonus = 0;
+			BigInteger to_bonus_height = 0;
+            var result = GetAssetInfo(to);
+            if (result.Length != null)
+			{
+				AssetInfo toInfo = Helper.Deserialize(result) as AssetInfo;
+				to_value = toInfo.balance;
+				to_bonus_height = toInfo.height;
+			}
 
             if (from == GOD)
             {
@@ -127,51 +164,51 @@ namespace Neo.SmartContract
             } else {
                 if (!Runtime.CheckWitness(from)) return false;
 
-                from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
+				var result = GetAssetInfo(from);
+				if (result.Length != null)
+				{
+					AssetInfo fromInfo = Helper.Deserialize(result) as AssetInfo;
+					from_value = fromInfo.balance;
+					from_bonus_height = fromInfo.height;
+				}
                 if (from_value < value) return false;
-                from_bonus = ComputeBonus(current_height, from, from_value);
+                from_bonus = ComputeBonus(current_height, from, from_value, from_bonus_height);
             }
 
-            if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value);
+            if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value, to_bonus_height);
 
             if (from_bonus > 0)
             {
-                bool result = ShareBonus(from, from_bonus);
+                bool result = ShareBonus(from, from_bonus, seac_contract);
                 if (!result) return false;
             }
 
             if (to_bonus > 0)
             {
-                bool result = ShareBonus(to, to_bonus);
+                bool result = ShareBonus(to, to_bonus, seac_contract);
                 if (!result) return false;
             }
 
             if(from == GOD)
             {
-                Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(to), current_height);
-                Storage.Put(Storage.CurrentContext, to, to_value + value);
+				BigInteger new_to_value = to_value + value;
+                SetAssetInfo(to, new_to_value, current_height);
             } else {
-                Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(from), current_height);
+				BigInteger new_from_value = from_value - value;
+				SetAssetInfo(from, new_from_value, current_height);
                 if (from != to)
                 {
-                    if (from_value == value)
-                        Storage.Delete(Storage.CurrentContext, from);
-                    else
-                        Storage.Put(Storage.CurrentContext, from, from_value - value);
-                    Storage.Put(Storage.CurrentContext, BONUS_BASIC.Concat(to), current_height);
-                    Storage.Put(Storage.CurrentContext, to, to_value + value);
+					BigInteger new_to_value = to_value + value;
+					SetAssetInfo(to, new_to_value, current_height);
                 }
             }
             Transferred(from, to, value);
             return true;
         }
 
-        public static BigInteger ComputeBonus(BigInteger current_height, byte[] addr, BigInteger value)
+        public static BigInteger ComputeBonus(BigInteger current_height, byte[] addr, BigInteger value, BigInteger start_height)
         {
             if (current_height <= bonus_start_height) return 0;
-            BigInteger start_height = 0;
-            byte[] start_bonus = Storage.Get(Storage.CurrentContext, BONUS_BASIC.Concat(addr));
-            if (start_bonus.Length != 0) start_height = start_bonus.AsBigInteger();
             if (start_height < bonus_start_height) start_height = bonus_start_height;
             if (start_height >= bonus_end_height) return 0;
             if (current_height > bonus_end_height) current_height = bonus_end_height;
@@ -179,9 +216,8 @@ namespace Neo.SmartContract
             return b;
         }
 
-        public static bool ShareBonus(byte[] addr, BigInteger value)
+        public static bool ShareBonus(byte[] addr, BigInteger value, byte[] seac_contract)
         {
-            byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             var bonus_args = new object[] { addr, value };
             var contract = (NEP5Contract)seac_contract.ToDelegate();
             bool result = (bool)contract("bonus", bonus_args);
@@ -192,7 +228,10 @@ namespace Neo.SmartContract
         // 根据地址获取token的余额
         public static BigInteger BalanceOf(byte[] address)
         {
-            return Storage.Get(Storage.CurrentContext, address).AsBigInteger();
+            var result = GetAssetInfo(address);
+            if (result.Length == 0) return 0;
+            AssetInfo assetInfo = Helper.Deserialize(result) as AssetInfo;
+            return assetInfo.balance;
         }
 
         // check whether asset is gseas and get sender script hash
