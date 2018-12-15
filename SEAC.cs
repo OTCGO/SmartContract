@@ -1,6 +1,7 @@
 using Neo.SmartContract.Framework;
 using Neo.SmartContract.Framework.Services.Neo;
 using Neo.SmartContract.Framework.Services.System;
+using Helper = Neo.SmartContract.Framework.Helper;
 using System;
 using System.ComponentModel;
 using System.Numerics;
@@ -12,10 +13,9 @@ namespace Neo.SmartContract
         //Token Settings
         public static string Name() => "Coin of SEA";
         public static string Symbol() => "SEAC";
-        public static readonly byte[] Owner = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         public static byte Decimals() => 8;
         private const ulong factor = 100000000; //decided by Decimals()
-        private static readonly byte[] SEAS_CONTRACT = "SEAS".AsByteArray();
+        private static readonly byte[] SEAS_CONTRACT = Helper.HexToBytes("5f628a5b23b06f3451b38c3395c80ecb28f5b26b");
         public delegate object NEP5Contract(string method, object[] args);
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
 
@@ -24,6 +24,7 @@ namespace Neo.SmartContract
         private static readonly byte[] gseac_asset_id = { 193, 234, 114, 196, 147, 225, 180, 208, 206, 208, 202, 129, 101, 209, 8, 45, 157, 22, 150, 60, 219, 26, 192, 111, 225, 22, 231, 202, 220, 64, 52, 225 };//testnet
         //private static readonly byte[] gseac_asset_id = { 63, 166, 52, 213, 43, 133, 21, 182, 236, 78, 146, 203, 95, 72, 194, 43, 76, 11, 5, 92, 99, 76, 169, 18, 35, 221, 194, 182, 153, 62, 46, 165 };//mainnet
         private const ulong total_amount = 100000000 * factor; // total token amount
+        public static BigInteger TotalSupply() => total_amount;
 
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
@@ -43,12 +44,6 @@ namespace Neo.SmartContract
             }
             else if (Runtime.Trigger == TriggerType.Application)
             {
-                if (operation == "deploy")
-                {
-                    if (args.Length != 1) return false;
-                    byte[] contract = (byte[])args[0];
-                    return Deploy(contract);
-                }
                 if (operation == "mintTokens") return MintTokens();
                 if (operation == "totalSupply") return TotalSupply();
                 if (operation == "name") return Name();
@@ -69,27 +64,16 @@ namespace Neo.SmartContract
                 }
                 if (operation == "decimals") return Decimals();
                 if (operation == "bonus"){
-                    if (args.Length !=2) return false;
-                    byte[] addr = (byte[])args[0];
-                    BigInteger value = (BigInteger)args[1];
+                    if (args.Length !=4) return false;
+                    byte[] from = (byte[])args[0];
+                    BigInteger from_bonus = (BigInteger)args[1];
+					byte[] to = (byte[])args[2];
+					BigInteger to_bonus = (BigInteger)args[3];
                     byte[] callscript = ExecutionEngine.CallingScriptHash;
-                    return Bonus(addr, value, callscript);
+                    return Bonus(from, from_bonus, to, to_bonus, callscript);
                 }
             }
             return false;
-        }
-
-        // initialization parameters, only once
-        // 初始化参数
-        public static bool Deploy(byte[] contract)
-        {
-            if (contract.Length != 20) return false;
-            if (!Runtime.CheckWitness(Owner)) return false;
-            byte[] seas_contract = Storage.Get(Storage.CurrentContext, SEAS_CONTRACT);
-            if (seas_contract.Length != 0) return false;
-            Storage.Put(Storage.CurrentContext, SEAS_CONTRACT, contract);
-            Storage.Put(Storage.CurrentContext, "totalSupply", total_amount);
-            return true;
         }
 
         public static bool MintTokens()
@@ -109,13 +93,6 @@ namespace Neo.SmartContract
             Storage.Put(Storage.CurrentContext, sender, token + balance);
             Transferred(GOD, sender, token);
             return true;
-        }
-
-        // get the total token supply
-        // 获取已发行token总量
-        public static BigInteger TotalSupply()
-        {
-            return Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
         }
 
         // function that is always called when someone wants to transfer tokens.
@@ -201,15 +178,22 @@ namespace Neo.SmartContract
             return value;
         }
 
-        private static bool Bonus(byte[] addr, BigInteger value, byte[] callscript)
+        private static bool Bonus(byte[] from, BigInteger from_bonus, byte[] to, BigInteger to_bonus, byte[] callscript)
         {
-            if (addr.Length != 20) return false;
-            if (value <= 0) return false;
-            byte[] seas_contract = Storage.Get(Storage.CurrentContext, SEAS_CONTRACT);
-            if (seas_contract != callscript) return false;
-            BigInteger balance = Storage.Get(Storage.CurrentContext, addr).AsBigInteger();
-            Storage.Put(Storage.CurrentContext, addr, value + balance);
-            Transferred(GOD, addr, value);
+            if (from.Length != 20 || to.Length != 20) return false;
+            if (SEAS_CONTRACT != callscript) return false;
+			if (from_bonus > 0)
+			{
+				BigInteger balance = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
+				Storage.Put(Storage.CurrentContext, from, from_bonus + balance);
+				Transferred(GOD, from, from_bonus);
+			}
+			if (to_bonus > 0)
+			{
+				BigInteger balance = Storage.Get(Storage.CurrentContext, to).AsBigInteger();
+				Storage.Put(Storage.CurrentContext, to, to_bonus + balance);
+				Transferred(GOD, to, to_bonus);
+			}
             return true;
 
         }
