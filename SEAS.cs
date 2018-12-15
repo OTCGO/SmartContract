@@ -27,6 +27,7 @@ namespace Neo.SmartContract
         private static readonly byte[] gseas_asset_id = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
         //private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
         private const ulong total_amount = 100000000 * factor; // total token amount
+        public static BigInteger TotalSupply() => total_amount;
 
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
@@ -84,7 +85,6 @@ namespace Neo.SmartContract
             byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             if (seac_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAC_CONTRACT, contract);
-            Storage.Put(Storage.CurrentContext, "totalSupply", total_amount);
             return true;
         }
 
@@ -126,12 +126,6 @@ namespace Neo.SmartContract
             return true;
         }
 
-        // get the total token supply
-        // 获取已发行token总量
-        public static BigInteger TotalSupply()
-        {
-            return Storage.Get(Storage.CurrentContext, "totalSupply").AsBigInteger();
-        }
 
         // function that is always called when someone wants to transfer tokens.
         // 流转token调用
