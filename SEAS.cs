@@ -6,9 +6,9 @@ using System;
 using System.ComponentModel;
 using System.Numerics;
 
-namespace Neo.SmartContract
+namespace SEAS
 {
-    public class SEAS : Framework.SmartContract
+    public class SEAS : SmartContract
     {
         //Token Settings
         public static string Name() => "Shares of SEA";
@@ -101,17 +101,19 @@ namespace Neo.SmartContract
         private static void SetAssetInfo(byte[] address, BigInteger balance, BigInteger height)
         {
             StorageMap assetInfo = Storage.CurrentContext.CreateMap(nameof(assetInfo));
-			if (balance <= 0)
-			{
-				assetInfo.Delete(address); //0.1
-			} else {
-				AssetInfo info = new AssetInfo
-				{
-					balance = balance,
-					height = height 
-				};
-				assetInfo.Put(address, Helper.Serialize(info)); //1
-			}
+            if (balance <= 0)
+            {
+                assetInfo.Delete(address); //0.1
+            }
+            else
+            {
+                AssetInfo info = new AssetInfo
+                {
+                    balance = balance,
+                    height = height
+                };
+                assetInfo.Put(address, Helper.Serialize(info)); //1
+            }
         }
 
         public static bool MintTokens()
@@ -140,51 +142,53 @@ namespace Neo.SmartContract
             BigInteger current_height = Blockchain.GetHeight();
             BigInteger from_value = 0;
             BigInteger from_bonus = 0;
-			BigInteger from_bonus_height = 0;
+            BigInteger from_bonus_height = 0;
             BigInteger to_value = 0;
             BigInteger to_bonus = 0;
-			BigInteger to_bonus_height = 0;
-            var result = GetAssetInfo(to);
-            if (result.Length != null)
-			{
-				AssetInfo toInfo = Helper.Deserialize(result) as AssetInfo;
-				to_value = toInfo.balance;
-				to_bonus_height = toInfo.height;
-			}
+            BigInteger to_bonus_height = 0;
+            var to_result = GetAssetInfo(to);
+            if (to_result != null)
+            {
+                to_value = to_result.balance;
+                to_bonus_height = to_result.height;
+            }
 
             if (from == GOD)
             {
                 if (!Runtime.CheckWitness(to)) return false;
-            } else {
+            }
+            else
+            {
                 if (!Runtime.CheckWitness(from)) return false;
 
-				var result = GetAssetInfo(from);
-				if (result.Length != null)
-				{
-					AssetInfo fromInfo = Helper.Deserialize(result) as AssetInfo;
-					from_value = fromInfo.balance;
-					from_bonus_height = fromInfo.height;
-				}
+                var from_result = GetAssetInfo(from);
+                if (from_result != null)
+                {
+                    from_value = from_result.balance;
+                    from_bonus_height = from_result.height;
+                }
                 if (from_value < value) return false;
                 from_bonus = ComputeBonus(current_height, from, from_value, from_bonus_height);
             }
 
             if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value, to_bonus_height);
 
-			bool result = ShareBonus(from, from_bonus, to, to_bonus, seac_contract);
-			if (!result) return false;
+            bool result = ShareBonus(from, from_bonus, to, to_bonus, seac_contract);
+            if (!result) return false;
 
-            if(from == GOD)
+            if (from == GOD)
             {
-				BigInteger new_to_value = to_value + value;
+                BigInteger new_to_value = to_value + value;
                 SetAssetInfo(to, new_to_value, current_height);
-            } else {
-				BigInteger new_from_value = from_value - value;
-				SetAssetInfo(from, new_from_value, current_height);
+            }
+            else
+            {
+                BigInteger new_from_value = from_value - value;
+                SetAssetInfo(from, new_from_value, current_height);
                 if (from != to)
                 {
-					BigInteger new_to_value = to_value + value;
-					SetAssetInfo(to, new_to_value, current_height);
+                    BigInteger new_to_value = to_value + value;
+                    SetAssetInfo(to, new_to_value, current_height);
                 }
             }
             Transferred(from, to, value);
@@ -214,9 +218,8 @@ namespace Neo.SmartContract
         public static BigInteger BalanceOf(byte[] address)
         {
             var result = GetAssetInfo(address);
-            if (result.Length == 0) return 0;
-            AssetInfo assetInfo = Helper.Deserialize(result) as AssetInfo;
-            return assetInfo.balance;
+            if (result != null) return 0;
+            return result.balance;
         }
 
         // check whether asset is gseas and get sender script hash
