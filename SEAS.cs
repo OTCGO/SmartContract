@@ -177,17 +177,8 @@ namespace Neo.SmartContract
 
             if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value, to_bonus_height);
 
-            if (from_bonus > 0)
-            {
-                bool result = ShareBonus(from, from_bonus, seac_contract);
-                if (!result) return false;
-            }
-
-            if (to_bonus > 0)
-            {
-                bool result = ShareBonus(to, to_bonus, seac_contract);
-                if (!result) return false;
-            }
+			bool result = ShareBonus(from, from_bonus, to, to_bonus, seac_contract);
+			if (!result) return false;
 
             if(from == GOD)
             {
@@ -216,9 +207,9 @@ namespace Neo.SmartContract
             return b;
         }
 
-        public static bool ShareBonus(byte[] addr, BigInteger value, byte[] seac_contract)
+        public static bool ShareBonus(byte[] from, BigInteger from_bonus, byte[] to, BigInteger to_bonus, byte[] seac_contract)
         {
-            var bonus_args = new object[] { addr, value };
+            var bonus_args = new object[] { from, from_bonus, to, to_bonus };
             var contract = (NEP5Contract)seac_contract.ToDelegate();
             bool result = (bool)contract("bonus", bonus_args);
             return result;
