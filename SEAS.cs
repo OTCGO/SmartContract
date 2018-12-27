@@ -1,7 +1,6 @@
 using Neo.SmartContract.Framework;
 using Neo.SmartContract.Framework.Services.Neo;
 using Neo.SmartContract.Framework.Services.System;
-using Helper = Neo.SmartContract.Framework.Helper;
 using System;
 using System.ComponentModel;
 using System.Numerics;
@@ -23,6 +22,14 @@ namespace SEAS
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
 
         //ICO Settings
+        private static readonly byte[] BYTE1 = { 0 };
+        private static readonly byte[] BYTE2 = { 0, 0 };
+        private static readonly byte[] BYTE3 = { 0, 0, 0 };
+        private static readonly byte[] BYTE4 = { 0, 0, 0, 0 };
+        private static readonly byte[] BYTE5 = { 0, 0, 0, 0, 0 };
+        private static readonly byte[] BYTE6 = { 0, 0, 0, 0, 0, 0 };
+        private static readonly byte[] BYTE7 = { 0, 0, 0, 0, 0, 0, 0 };
+        private static readonly byte[] BYTE8 = { 0, 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
         private static readonly byte[] gseas_asset_id = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
         //private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
@@ -82,37 +89,107 @@ namespace SEAS
         {
             if (contract.Length != 20) return false;
             if (!Runtime.CheckWitness(Owner)) return false;
-            byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
-            if (seac_contract.Length != 0) return false;
+            //byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
+            //if (seac_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAC_CONTRACT, contract);
             return true;
         }
 
-        private static AssetInfo GetAssetInfo(byte[] address)
+        private static BigInteger GetBalance(byte[] info)
         {
-            if (address.Length != 20)
-                throw new InvalidOperationException("The parameter address SHOULD be 20-byte addresses.");
-            StorageMap assetInfo = Storage.CurrentContext.CreateMap(nameof(assetInfo));
-            var result = assetInfo.Get(address); //0.1
-            if (result.Length == 0) return null;
-            return Helper.Deserialize(result) as AssetInfo;
+            if (info == null)
+            {
+                throw new InvalidOperationException("The parameter address SHOULD NOT be null.");
+            }
+            if (info.Length != 16)
+            {
+                throw new InvalidOperationException("The parameter info's length SHOULD = 16.");
+            }
+            return info.Range(0,8).AsBigInteger();
         }
 
+        private static BigInteger GetHeight(byte[] info)
+        {
+            if (info == null)
+            {
+                throw new InvalidOperationException("The parameter address SHOULD NOT be null.");
+            }
+            if (info.Length != 16)
+            {
+                throw new InvalidOperationException("The parameter info's length SHOULD = 16.");
+            }
+            return info.Range(8, 8).AsBigInteger();
+        }
+
+        private static byte[] GetAssetInfo(byte[] address)
+        {
+            if (address.Length != 20) return null;
+            byte[] assetInfo = Storage.Get(Storage.CurrentContext, address); //0.1
+            if (assetInfo.Length == 0) return null;
+            if (assetInfo.Length != 16) return null;
+            return assetInfo;
+        }
+
+        private static byte[] GetFixed8(BigInteger value)
+        {
+            byte[] tmp = value.AsByteArray();
+            if (tmp.Length > 8)
+            {
+                throw new InvalidOperationException("The parameter value's length SHOULD <= 8.");
+            }
+            if (tmp.Length == 7)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE1);
+                return tmp8;
+            }
+            if (tmp.Length == 6)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE2);
+                return tmp8;
+            }
+            if (tmp.Length == 5)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE3);
+                return tmp8;
+            }
+            if (tmp.Length == 4)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE4);
+                return tmp8;
+            }
+            if (tmp.Length == 3)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE5);
+                return tmp8;
+            }
+            if (tmp.Length == 2)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE6);
+                return tmp8;
+            }
+            if (tmp.Length == 1)
+            {
+                byte[] tmp8 = tmp.Concat(BYTE7);
+                return tmp8;
+            }
+            if (tmp.Length == 0)
+            {
+                return BYTE8;
+            }
+            return tmp;
+        }
         private static void SetAssetInfo(byte[] address, BigInteger balance, BigInteger height)
         {
-            StorageMap assetInfo = Storage.CurrentContext.CreateMap(nameof(assetInfo));
             if (balance <= 0)
             {
-                assetInfo.Delete(address); //0.1
+                Storage.Delete(Storage.CurrentContext, address); //0.1
             }
             else
             {
-                AssetInfo info = new AssetInfo
-                {
-                    balance = balance,
-                    height = height
-                };
-                assetInfo.Put(address, Helper.Serialize(info)); //1
+                byte[] b8 = GetFixed8(balance);
+                byte[] h8 = GetFixed8(height);
+                byte[] bh16 = b8.Concat(h8);
+                Storage.Put(Storage.CurrentContext, address, bh16); //1
             }
         }
 
@@ -138,7 +215,6 @@ namespace SEAS
             if (value <= 0) return false;
             byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             if (seac_contract.Length != 20) return false;
-
             BigInteger current_height = Blockchain.GetHeight();
             BigInteger from_value = 0;
             BigInteger from_bonus = 0;
@@ -146,11 +222,11 @@ namespace SEAS
             BigInteger to_value = 0;
             BigInteger to_bonus = 0;
             BigInteger to_bonus_height = 0;
-            var to_result = GetAssetInfo(to);
+            byte[] to_result = GetAssetInfo(to);
             if (to_result != null)
             {
-                to_value = to_result.balance;
-                to_bonus_height = to_result.height;
+                to_value = GetBalance(to_result);
+                to_bonus_height = GetHeight(to_result);
             }
 
             if (from == GOD)
@@ -161,11 +237,11 @@ namespace SEAS
             {
                 if (!Runtime.CheckWitness(from)) return false;
 
-                var from_result = GetAssetInfo(from);
+                byte[] from_result = GetAssetInfo(from);
                 if (from_result != null)
                 {
-                    from_value = from_result.balance;
-                    from_bonus_height = from_result.height;
+                    from_value = GetBalance(from_result);
+                    from_bonus_height = GetHeight(from_result);
                 }
                 if (from_value < value) return false;
                 from_bonus = ComputeBonus(current_height, from, from_value, from_bonus_height);
@@ -173,8 +249,11 @@ namespace SEAS
 
             if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value, to_bonus_height);
 
-            bool result = ShareBonus(from, from_bonus, to, to_bonus, seac_contract);
-            if (!result) return false;
+            if (from_bonus > 0 || to_bonus > 0)
+            {
+                bool result = ShareBonus(from, from_bonus, to, to_bonus, seac_contract);
+                if (!result) return false;
+            }
 
             if (from == GOD)
             {
@@ -217,9 +296,9 @@ namespace SEAS
         // 根据地址获取token的余额
         public static BigInteger BalanceOf(byte[] address)
         {
-            var result = GetAssetInfo(address);
-            if (result != null) return 0;
-            return result.balance;
+            byte[] result = GetAssetInfo(address);
+            if (result == null) return 0;
+            return GetBalance(result);
         }
 
         // check whether asset is gseas and get sender script hash
