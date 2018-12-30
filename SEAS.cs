@@ -125,7 +125,6 @@ namespace SEAS
         {
             if (address.Length != 20) return null;
             byte[] assetInfo = Storage.Get(Storage.CurrentContext, address); //0.1
-            if (assetInfo.Length == 0) return null;
             if (assetInfo.Length != 16) return null;
             return assetInfo;
         }
@@ -195,13 +194,40 @@ namespace SEAS
 
         public static bool MintTokens()
         {
-            byte[] sender = GetSender();
-            if (sender.Length != 20) return false;
+            byte[] to = GetSender();
+            if (to.Length != 20) return false;
+            if (!Runtime.CheckWitness(to)) return false;
             BigInteger token = (BigInteger)GetContributeValue();
             if (token <= 0) return false;
-            BigInteger transfer_value = token / 100000000;
-            bool result = Transfer(GOD, sender, transfer_value);
-            if (!result) return false;
+
+            BigInteger value = token / 100000000;
+
+            byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
+            if (seac_contract.Length != 20) return false;
+            BigInteger current_height = Blockchain.GetHeight();
+            BigInteger to_value = 0;
+            BigInteger to_bonus = 0;
+            BigInteger to_bonus_height = 0;
+
+            to_bonus = ComputeBonus(current_height, value, 0);
+            byte[] to_result = GetAssetInfo(to);
+            if (to_result != null)
+            {
+                to_value = GetBalance(to_result);
+                to_bonus_height = GetHeight(to_result);
+            }
+            to_bonus += ComputeBonus(current_height, to_value, to_bonus_height);
+
+            if (to_bonus > 0)
+            {
+                bool result = ShareBonus(GOD, 0, to, to_bonus, seac_contract);
+                if (!result) return false;
+            }
+
+            BigInteger new_to_value = to_value + value;
+            SetAssetInfo(to, new_to_value, current_height);
+
+            Transferred(GOD, to, value);
             return true;
         }
 
@@ -213,6 +239,7 @@ namespace SEAS
             if (from.Length != 20) return false;
             if (to.Length != 20) return false;
             if (value <= 0) return false;
+            if (!Runtime.CheckWitness(from)) return false;
             byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             if (seac_contract.Length != 20) return false;
             BigInteger current_height = Blockchain.GetHeight();
@@ -222,6 +249,14 @@ namespace SEAS
             BigInteger to_value = 0;
             BigInteger to_bonus = 0;
             BigInteger to_bonus_height = 0;
+
+            byte[] from_result = GetAssetInfo(from);
+            if (from_result == null) return false;
+            from_value = GetBalance(from_result);
+            from_bonus_height = GetHeight(from_result);
+            if (from_value < value) return false;
+            from_bonus = ComputeBonus(current_height, from_value, from_bonus_height);
+
             byte[] to_result = GetAssetInfo(to);
             if (to_result != null)
             {
@@ -229,25 +264,7 @@ namespace SEAS
                 to_bonus_height = GetHeight(to_result);
             }
 
-            if (from == GOD)
-            {
-                if (!Runtime.CheckWitness(to)) return false;
-            }
-            else
-            {
-                if (!Runtime.CheckWitness(from)) return false;
-
-                byte[] from_result = GetAssetInfo(from);
-                if (from_result != null)
-                {
-                    from_value = GetBalance(from_result);
-                    from_bonus_height = GetHeight(from_result);
-                }
-                if (from_value < value) return false;
-                from_bonus = ComputeBonus(current_height, from, from_value, from_bonus_height);
-            }
-
-            if (to_value > 0 && from != to) to_bonus = ComputeBonus(current_height, to, to_value, to_bonus_height);
+            if (from != to) to_bonus = ComputeBonus(current_height, to_value, to_bonus_height);
 
             if (from_bonus > 0 || to_bonus > 0)
             {
@@ -255,31 +272,26 @@ namespace SEAS
                 if (!result) return false;
             }
 
-            if (from == GOD)
+            BigInteger new_from_value = from_value - value;
+            SetAssetInfo(from, new_from_value, current_height);
+            if (from != to)
             {
                 BigInteger new_to_value = to_value + value;
                 SetAssetInfo(to, new_to_value, current_height);
             }
-            else
-            {
-                BigInteger new_from_value = from_value - value;
-                SetAssetInfo(from, new_from_value, current_height);
-                if (from != to)
-                {
-                    BigInteger new_to_value = to_value + value;
-                    SetAssetInfo(to, new_to_value, current_height);
-                }
-            }
+
             Transferred(from, to, value);
             return true;
         }
 
-        public static BigInteger ComputeBonus(BigInteger current_height, byte[] addr, BigInteger value, BigInteger start_height)
+        public static BigInteger ComputeBonus(BigInteger current_height, BigInteger value, BigInteger start_height)
         {
+            if (value <= 0) return 0;
             if (current_height <= bonus_start_height) return 0;
             if (start_height < bonus_start_height) start_height = bonus_start_height;
             if (start_height >= bonus_end_height) return 0;
             if (current_height > bonus_end_height) current_height = bonus_end_height;
+            if (current_height <= start_height) return 0;
             BigInteger b = (current_height - start_height) * 6 * value;
             return b;
         }

@@ -15,7 +15,7 @@ namespace Neo.SmartContract
         public static string Symbol() => "SEAC";
         public static byte Decimals() => 8;
         private const ulong factor = 100000000; //decided by Decimals()
-        private static readonly byte[] SEAS_CONTRACT = Helper.HexToBytes("56d753c4ae32d4ce8c9b9da5179736b00804ab8d");
+        private static readonly byte[] SEAS_CONTRACT = Helper.HexToBytes("cfbe049f081a379927066395528953340864bd9d");
         public delegate object NEP5Contract(string method, object[] args);
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
 
