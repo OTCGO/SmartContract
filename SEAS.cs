@@ -68,6 +68,8 @@ namespace SEAS
                 {
                     if (args.Length != 3) return false;
                     byte[] from = (byte[])args[0];
+                    byte[] callscript = ExecutionEngine.CallingScriptHash;
+                    if (from != callscript) return false;
                     byte[] to = (byte[])args[1];
                     BigInteger value = (BigInteger)args[2];
                     return Transfer(from, to, value);
@@ -89,8 +91,8 @@ namespace SEAS
         {
             if (contract.Length != 20) return false;
             if (!Runtime.CheckWitness(Owner)) return false;
-            //byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
-            //if (seac_contract.Length != 0) return false;
+            byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
+            if (seac_contract.Length != 0) return false;
             Storage.Put(Storage.CurrentContext, SEAC_CONTRACT, contract);
             return true;
         }

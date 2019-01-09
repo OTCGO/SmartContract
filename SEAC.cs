@@ -44,6 +44,7 @@ namespace Neo.SmartContract
             }
             else if (Runtime.Trigger == TriggerType.Application)
             {
+                byte[] callscript = ExecutionEngine.CallingScriptHash;
                 if (operation == "mintTokens") return MintTokens();
                 if (operation == "totalSupply") return TotalSupply();
                 if (operation == "name") return Name();
@@ -52,6 +53,7 @@ namespace Neo.SmartContract
                 {
                     if (args.Length != 3) return false;
                     byte[] from = (byte[])args[0];
+                    if (from != callscript) return false;
                     byte[] to = (byte[])args[1];
                     BigInteger value = (BigInteger)args[2];
                     return Transfer(from, to, value);
@@ -69,7 +71,6 @@ namespace Neo.SmartContract
                     BigInteger from_bonus = (BigInteger)args[1];
 					byte[] to = (byte[])args[2];
 					BigInteger to_bonus = (BigInteger)args[3];
-                    byte[] callscript = ExecutionEngine.CallingScriptHash;
                     return Bonus(from, from_bonus, to, to_bonus, callscript);
                 }
             }
