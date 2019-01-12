@@ -53,10 +53,9 @@ namespace Neo.SmartContract
                 {
                     if (args.Length != 3) return false;
                     byte[] from = (byte[])args[0];
-                    if (from != callscript) return false;
                     byte[] to = (byte[])args[1];
                     BigInteger value = (BigInteger)args[2];
-                    return Transfer(from, to, value);
+                    return Transfer(from, to, value, callscript);
                 }
                 if (operation == "balanceOf")
                 {
@@ -98,12 +97,12 @@ namespace Neo.SmartContract
 
         // function that is always called when someone wants to transfer tokens.
         // 流转token调用
-        public static bool Transfer(byte[] from, byte[] to, BigInteger value)
+        public static bool Transfer(byte[] from, byte[] to, BigInteger value, byte[] callscript)
         {
             if (from.Length != 20) return false;
             if (to.Length != 20) return false;
             if (value <= 0) return false;
-            if (!Runtime.CheckWitness(from)) return false;
+            if (!Runtime.CheckWitness(from) && from.AsBigInteger() != callscript.AsBigInteger()) return false;
 
             BigInteger from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
             if (from_value < value) return false;

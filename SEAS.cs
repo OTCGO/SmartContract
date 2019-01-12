@@ -69,10 +69,9 @@ namespace SEAS
                     if (args.Length != 3) return false;
                     byte[] from = (byte[])args[0];
                     byte[] callscript = ExecutionEngine.CallingScriptHash;
-                    if (from != callscript) return false;
                     byte[] to = (byte[])args[1];
                     BigInteger value = (BigInteger)args[2];
-                    return Transfer(from, to, value);
+                    return Transfer(from, to, value, callscript);
                 }
                 if (operation == "balanceOf")
                 {
@@ -236,12 +235,12 @@ namespace SEAS
 
         // function that is always called when someone wants to transfer tokens.
         // 流转token调用
-        public static bool Transfer(byte[] from, byte[] to, BigInteger value)
+        public static bool Transfer(byte[] from, byte[] to, BigInteger value, byte[] callscript)
         {
             if (from.Length != 20) return false;
             if (to.Length != 20) return false;
             if (value <= 0) return false;
-            if (!Runtime.CheckWitness(from)) return false;
+            if (!Runtime.CheckWitness(from) && from.AsBigInteger() != callscript.AsBigInteger()) return false;
             byte[] seac_contract = Storage.Get(Storage.CurrentContext, SEAC_CONTRACT);
             if (seac_contract.Length != 20) return false;
             BigInteger current_height = Blockchain.GetHeight();
