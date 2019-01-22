@@ -273,14 +273,17 @@ namespace SEAS
                 if (!result) return false;
             }
 
-            BigInteger new_from_value = from_value - value;
-            SetAssetInfo(from, new_from_value, current_height);
-            if (from != to)
+            if (from == to)
             {
-                BigInteger new_to_value = to_value + value;
-                SetAssetInfo(to, new_to_value, current_height);
+                SetAssetInfo(from, from_value, current_height);
+                Transferred(from, to, value);
+                return true;
             }
 
+            BigInteger new_from_value = from_value - value;
+            SetAssetInfo(from, new_from_value, current_height);
+            BigInteger new_to_value = to_value + value;
+            SetAssetInfo(to, new_to_value, current_height);
             Transferred(from, to, value);
             return true;
         }

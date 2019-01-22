@@ -106,6 +106,12 @@ namespace Neo.SmartContract
 
             BigInteger from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
             if (from_value < value) return false;
+            
+            if (from == to)
+            {
+                Transferred(from, to, value);
+                return true;
+            }
 
             BigInteger to_value = Storage.Get(Storage.CurrentContext, to).AsBigInteger();
 
