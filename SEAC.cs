@@ -21,8 +21,8 @@ namespace Neo.SmartContract
 
         //ICO Settings
         private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
-        private static readonly byte[] gseac_asset_id = { 193, 234, 114, 196, 147, 225, 180, 208, 206, 208, 202, 129, 101, 209, 8, 45, 157, 22, 150, 60, 219, 26, 192, 111, 225, 22, 231, 202, 220, 64, 52, 225 };//testnet
-        //private static readonly byte[] gseac_asset_id = { 63, 166, 52, 213, 43, 133, 21, 182, 236, 78, 146, 203, 95, 72, 194, 43, 76, 11, 5, 92, 99, 76, 169, 18, 35, 221, 194, 182, 153, 62, 46, 165 };//mainnet
+        private static readonly byte[] AssetId = { 193, 234, 114, 196, 147, 225, 180, 208, 206, 208, 202, 129, 101, 209, 8, 45, 157, 22, 150, 60, 219, 26, 192, 111, 225, 22, 231, 202, 220, 64, 52, 225 };//testnet
+        //private static readonly byte[] AssetId = { 63, 166, 52, 213, 43, 133, 21, 182, 236, 78, 146, 203, 95, 72, 194, 43, 76, 11, 5, 92, 99, 76, 169, 18, 35, 221, 194, 182, 153, 62, 46, 165 };//mainnet
         private const ulong total_amount = 100000000 * factor; // total token amount
         public static BigInteger TotalSupply() => total_amount;
 
@@ -33,14 +33,7 @@ namespace Neo.SmartContract
         {
             if (Runtime.Trigger == TriggerType.Verification)
             {
-                Transaction tx = (Transaction)ExecutionEngine.ScriptContainer;
-                var type = tx.Type;
-                if (type != INVOCATION_TRANSACTION_TYPE) return false;
-                bool result = CheckSender();
-                if (!result) return false;
-                ulong contribute_value = GetContributeValue();
-                if (contribute_value == 0) return false;
-                return true;
+                return false;
             }
             else if (Runtime.Trigger == TriggerType.Application)
             {
@@ -72,6 +65,17 @@ namespace Neo.SmartContract
 					BigInteger to_bonus = (BigInteger)args[3];
                     return Bonus(from, from_bonus, to, to_bonus, callscript);
                 }
+            }
+            else if (Runtime.Trigger == TriggerType.VerificationR) //Backward compatibility, refusing to accept other assets
+            {
+                var currentHash = ExecutionEngine.ExecutingScriptHash;
+                var tx = ExecutionEngine.ScriptContainer as Transaction;
+                foreach (var output in tx.GetOutputs())
+                {
+                    if (output.ScriptHash == currentHash && output.AssetId.AsBigInteger() != AssetId.AsBigInteger())
+                        return false;
+                }
+                return true;
             }
             return false;
         }
@@ -107,11 +111,7 @@ namespace Neo.SmartContract
             BigInteger from_value = Storage.Get(Storage.CurrentContext, from).AsBigInteger();
             if (from_value < value) return false;
             
-            if (from == to)
-            {
-                Transferred(from, to, value);
-                return true;
-            }
+            if (from == to) return true;
 
             BigInteger to_value = Storage.Get(Storage.CurrentContext, to).AsBigInteger();
 
@@ -139,26 +139,9 @@ namespace Neo.SmartContract
             // you can choice refund or not refund
             foreach (TransactionOutput output in reference)
             {
-                if (output.AssetId == gseac_asset_id) return output.ScriptHash;
+                if (output.AssetId == AssetId) return output.ScriptHash;
             }
             return new byte[] { };
-        }
-
-        private static bool CheckSender()
-        {
-            Transaction tx = (Transaction)ExecutionEngine.ScriptContainer;
-            TransactionOutput[] reference = tx.GetReferences();
-            ulong count = 0;
-            foreach (TransactionOutput output in reference)
-            {
-                if (output.AssetId == gseac_asset_id)
-                {
-                    if (output.ScriptHash == GetReceiver()) return false;
-                    count += 1;
-                }
-            }
-            if (count != 1) return false;
-            return true;
         }
 
         // get smart contract script hash
@@ -176,7 +159,7 @@ namespace Neo.SmartContract
             // 获取转入智能合约地址的申一币总量
             foreach (TransactionOutput output in outputs)
             {
-                if (output.ScriptHash == GetReceiver() && output.AssetId == gseac_asset_id)
+                if (output.ScriptHash == GetReceiver() && output.AssetId == AssetId)
                 {
                     value += (ulong)output.Value;
                 }

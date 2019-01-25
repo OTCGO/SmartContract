@@ -31,8 +31,8 @@ namespace SEAS
         private static readonly byte[] BYTE7 = { 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] BYTE8 = { 0, 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] GOD = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
-        private static readonly byte[] gseas_asset_id = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
-        //private static readonly byte[] gseas_asset_id = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
+        private static readonly byte[] AssetId = { 234, 81, 101, 147, 88, 115, 123, 111, 43, 52, 78, 224, 151, 17, 212, 56, 208, 61, 117, 214, 234, 127, 72, 121, 32, 36, 165, 82, 142, 160, 183, 187 };//testnet
+        //private static readonly byte[] AssetId = { 212, 79, 241, 19, 187, 199, 206, 203, 163, 223, 13, 211, 61, 76, 202, 195, 16, 193, 103, 15, 214, 81, 150, 19, 136, 242, 73, 194, 107, 99, 233, 48 };//mainnet
         private const ulong total_amount = 100000000 * factor; // total token amount
         public static BigInteger TotalSupply() => total_amount;
 
@@ -49,7 +49,7 @@ namespace SEAS
                 bool result = CheckSender();
                 if (!result) return false;
                 ulong contribute_value = GetContributeValue();
-                if (contribute_value == 0) return false;
+                if (contribute_value <= 0) return false;
                 return true;
             }
             else if (Runtime.Trigger == TriggerType.Application)
@@ -80,6 +80,17 @@ namespace SEAS
                     return BalanceOf(account);
                 }
                 if (operation == "decimals") return Decimals();
+            }
+            else if (Runtime.Trigger == TriggerType.VerificationR) //Backward compatibility, refusing to accept other assets
+            {
+                var currentHash = ExecutionEngine.ExecutingScriptHash;
+                var tx = ExecutionEngine.ScriptContainer as Transaction;
+                foreach (var output in tx.GetOutputs())
+                {
+                    if (output.ScriptHash == currentHash && output.AssetId.AsBigInteger() != AssetId.AsBigInteger())
+                        return false;
+                }
+                return true;
             }
             return false;
         }
@@ -276,7 +287,6 @@ namespace SEAS
             if (from == to)
             {
                 SetAssetInfo(from, from_value, current_height);
-                Transferred(from, to, value);
                 return true;
             }
 
@@ -325,7 +335,7 @@ namespace SEAS
             // you can choice refund or not refund
             foreach (TransactionOutput output in reference)
             {
-                if (output.AssetId == gseas_asset_id) return output.ScriptHash;
+                if (output.AssetId == AssetId) return output.ScriptHash;
             }
             return new byte[] { };
         }
@@ -337,13 +347,13 @@ namespace SEAS
             ulong count = 0;
             foreach (TransactionOutput output in reference)
             {
-                if (output.AssetId == gseas_asset_id)
+                if (output.AssetId == AssetId)
                 {
                     if (output.ScriptHash == GetReceiver()) return false;
                     count += 1;
                 }
             }
-            if (count != 1) return false;
+            if (count < 1) return false;
             return true;
         }
 
@@ -362,7 +372,7 @@ namespace SEAS
             // 获取转入智能合约地址的申一股总量
             foreach (TransactionOutput output in outputs)
             {
-                if (output.ScriptHash == GetReceiver() && output.AssetId == gseas_asset_id)
+                if (output.ScriptHash == GetReceiver() && output.AssetId == AssetId)
                 {
                     value += (ulong)output.Value;
                 }
