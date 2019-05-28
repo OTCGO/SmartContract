@@ -24,6 +24,7 @@ namespace Neo.SmartContract
         private static readonly byte[] BYTE7 = { 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] BYTE8 = { 0, 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] RETURN_PREFIX = "RETURN".AsByteArray();
+        private static readonly byte[] CONVER = "CONVER".AsByteArray();
         public delegate object NEP5Contract(string method, object[] args);
 
         [DisplayName("assetsupport")]
@@ -36,6 +37,8 @@ namespace Neo.SmartContract
         public static event Action<byte[], byte[], BigInteger, BigInteger> OrderTraded;
         [DisplayName("cancelorder")]
         public static event Action<byte[], byte[], byte[], byte[], BigInteger> OrderCanelled;
+        [DisplayName("claim")]
+        public static event Action<byte[], byte[], BigInteger> Claimed;
         [DisplayName("setreturn")]
         public static event Action<byte[], BigInteger> ReturnSet;
         [DisplayName("return")]
@@ -98,6 +101,12 @@ namespace Neo.SmartContract
             else if (Runtime.Trigger == TriggerType.Application)
             {
                 byte[] callscript = ExecutionEngine.CallingScriptHash;
+                if (operation == "deploy")
+                {
+                    #set conver
+                    if (args.Length != 1) return false;
+                    return Deploy();
+                }
                 if (operation == "support")
                 {
                     #support new asset
@@ -130,6 +139,8 @@ namespace Neo.SmartContract
                 }
                 if (operation == "claim"){
                     #claim assetA|assetB to buyer
+                    if (args.Length != 1) return false;
+                    return Claiming();
                 }
                 if (operation == "setreturn")
                 {
@@ -269,6 +280,22 @@ namespace Neo.SmartContract
             return info.Range(8, 8).AsBigInteger();
         }
 
+        public static bool Deploy()
+        {
+          byte[] me = GetReceiver();
+          var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
+          if (51 != itx.Script.Length) return false;
+          if (itx.Script[0] != 0x14) return false;
+          if (itx.Script.Range(21, 10) != new byte[] { 0x51, 0xc1, 0x06, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x67}) return false;
+          if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+          if (!Runtime.CheckWitness(OWNER)) return false;
+
+          byte[] conver = Storage.Get(Storage.CurrentContext, CONVER);
+          if (conver.Length != 0) return false;
+          Storage.Put(Storage.CurrentContext, CONVER, conver);
+          return true;
+        }
         public static bool SupportAsset()
         {
             byte[] me = GetReceiver();
@@ -405,7 +432,7 @@ namespace Neo.SmartContract
           if (assetB != makerInfo.Range(20, LENGTH_OF_SCRIPTHASH)) return false;
 
           BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
-          BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigIntefer();
+          BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
 
           byte[] aiS = GetAssetInfo(assetS);
           BigInteger decimalsS = GetDecimals(aiS);
@@ -474,6 +501,64 @@ namespace Neo.SmartContract
             return true;
           }
           return false;
+        }
+        private static bool SetConver(byte[] conver)
+        {
+            Storage.Put(Storage.CurrentContext, CONVER, conver);
+            return true;
+        }
+        private static byte[] GetConver()
+        {
+          return Storage.Get(Storage.CurrentContext, CONVER);
+        }
+        public static bool Claiming()
+        {
+          byte[] me = GetReceiver();
+          var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
+          if (199 != itx.Script.Length) return false;
+          if (itx.Script[0] != 0x03) return false;
+          if (itx.Script.Range(1,12) != new byte[] {0x53, 0x45, 0x41, 0x51, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67}) return false;
+          if(itx.Script.Range(13, LENGTH_OF_SCRIPTHASH) != me) return false;
+          if (itx.Script[33] != 0x08) return false;
+          if (itx.Script[42] != 0x14) return false;
+          if (itx.Script[63] != 0x14) return false;
+          if (itx.Script.Range(84, 12) != new byte[] {0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67}) return false;
+          if (itx.Script[116] != 0x08) return false;
+          if (itx.Script[125] != 0x14) return false;
+          if (itx.Script[146] != 0x14) return false;
+          if (itx.Script.Range(167, 12) != new byte[] {0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67}) return false;
+
+          BigInteger amountX = itx.Script.Range(34, LENGTH_OF_AMOUNT).AsBigIntefer();
+          if (amountX < 0) return false;
+          byte[] conver = GetConver();
+          if (itx.Script.Range(43, LENGTH_OF_SCRIPTHASH) != conver) return false;
+          if (itx.Script.Range(64, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+          byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
+          if (itx.Script.Range(179, LENGTH_OF_SCRIPTHASH) != asset) return false;
+
+          BigInteger amountC = itx.Script.Range(117, LENGTH_OF_AMOUNT).AsBigIntefer();
+          if (amountC <= 0) return false;
+          byte[] claimer = itx.Script.Range(126, LENGTH_OF_SCRIPTHASH);
+          if (claimer == me) return false;
+          if (itx.Script.Range(147, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+          if (!Runtime.CheckWitness(me)) return false;
+
+          byte[] claimInfo = RETURN_PREFIX.Concat(claimer).Concat(asset);
+          BigInteger cliamAmount = Storage.Get(Storage.CurrentContext, claimInfo).AsBigInteger();
+          if (claimAmount == 0) return false;
+          if (claimAmount != amountC) return false;
+
+          var balanceArgs = new object[] { me };
+          var contract = (NEP5Contract)asset.ToDelegate();
+          BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
+          if (balanceResult != amountX + amountC) return false;
+
+          DeleteClaimInfo(claimer, asset);
+
+          Claimed(claimer, asset, amountC);
+          return true;
         }
         private static bool SetReturnAmount(byte[] asset, BigInteger delta)
         {
