@@ -56,7 +56,7 @@ namespace Neo.SmartContract
                 if (type != INVOCATION_TRANSACTION_TYPE) return false;
                 var itx = (InvocationTransaction)tx;
 
-                if (51 == itx.Script.Length) //deploy
+                if (51 == itx.Script.Length) // deploy
                 {
                     if (itx.Script[0] != 0x14) return false;
                     if (itx.Script.Range(21, 10) != new byte[] { 0x51, 0xc1, 0x06, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x67}) return false;
@@ -66,7 +66,7 @@ namespace Neo.SmartContract
                     if (conver == null) return true;
                     return false;
                 }
-                if (52 == itx.Script.Length) //support
+                if (52 == itx.Script.Length) // support
                 {
                     if (itx.Script[0] != 0x14) return false;
                     if (itx.Script.Range(21, 11) != new byte[] { 0x51, 0xc1, 0x07, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x67 }) return false;
@@ -77,7 +77,7 @@ namespace Neo.SmartContract
                     if (old == null) return true;
                     return false;
                 }
-                if (54 == itx.Script.Length) //unsupport
+                if (54 == itx.Script.Length) // unsupport
                 {
                     if (itx.Script[0] != 0x14) return false;
                     if (itx.Script.Range(21, 13) != new byte[] { 0x51, 0xc1, 0x09, 0x75, 0x6e, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x67 }) return false;
@@ -88,6 +88,10 @@ namespace Neo.SmartContract
                     if (ai != null) return true;
                     return false;
                 }
+                if (140 == itx.Script.Length) // order
+                {
+                }
+
                 if (112 == itx.Script.Length) // return
                 {
                     if (itx.Script[0] != 0x08) return false;
@@ -134,12 +138,12 @@ namespace Neo.SmartContract
             else if (Runtime.Trigger == TriggerType.Application)
             {
                 byte[] callscript = ExecutionEngine.CallingScriptHash;
+                if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                 if (operation == "deploy")
                 {
                     #set conver
                     if (args.Length != 1) return false;
                     byte[] conver = (byte[])args[0];
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return Deploy(conver);
                 }
                 if (operation == "support")
@@ -147,7 +151,6 @@ namespace Neo.SmartContract
                     #support new asset
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return SupportAsset(asset);
                 }
                 if (operation == "unsupport")
@@ -155,34 +158,29 @@ namespace Neo.SmartContract
                     #unsupport asset
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return UNSupportAsset(asset);
                 }
                 if (operation == "new")
                 {
                     #new order
                     if (args.Length != 2) return false;
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return NewOrder();
                 }
                 if (operation == "trade")
                 {
                     #trade
                     if (args.Length != 4) return false;
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return Trading();
                 }
                 if (operation == "cancel")
                 {
                     #cancel order
                     if (args.Length != 4) return false;
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return CancelOrder();
                 }
                 if (operation == "claim"){
                     #claim assetA|assetB to buyer
                     if (args.Length != 1) return false;
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return Claiming();
                 }
                 if (operation == "setreturn")
@@ -190,14 +188,12 @@ namespace Neo.SmartContract
                     #return asset to OWNER
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return SetReturnAsset(asset);
                 }
                 if (operation == "return")
                 {
                     #return asset to OWNER
                     if (args.Length != 0) return false;
-                    if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                     return ReturnAsset();
                 }
             }
