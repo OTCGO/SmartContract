@@ -27,6 +27,8 @@ namespace Neo.SmartContract
         private static readonly byte[] CONVER = "CONVER".AsByteArray();
         public delegate object NEP5Contract(string method, object[] args);
 
+        [DisplayName("setconver")]
+        public static event Action<byte[]> ConverSetted;
         [DisplayName("assetsupport")]
         public static event Action<byte[]> AssetSupported;
         [DisplayName("assetunsupport")]
@@ -62,6 +64,17 @@ namespace Neo.SmartContract
 
                     byte[] conver = GetConver();
                     if (conver == null) return true;
+                    return false;
+                }
+                if (52 == itx.Script.Length) //support
+                {
+                    if (itx.Script[0] != 0x14) return false;
+                    if (itx.Script.Range(21, 11) != new byte[] { 0x51, 0xc1, 0x07, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x67 }) return false;
+                    if (itx.Script.Range(32, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+                    byte[] asset = itx.Script.Range(1, LENGTH_OF_SCRIPTHASH);
+                    byte[] old = GetAssetInfo(asset);
+                    if (old == null) return true;
                     return false;
                 }
                 if (112 == itx.Script.Length) // return
@@ -230,7 +243,7 @@ namespace Neo.SmartContract
             return assetInfo;
         }
         // set asset info
-        private static byte[] SetAssetInfo(byte[] asset, BigInteger decimals, BigInteger total)
+        private static bool SetAssetInfo(byte[] asset, BigInteger decimals, BigInteger total)
         {
             if (total < 0)
             {
@@ -242,7 +255,9 @@ namespace Neo.SmartContract
                 byte[] t8 = GetFixed8(total);
                 byte[] dt16 = d8.Concat(t8);
                 Storage.Put(Storage.CurrentContext, asset, dt16); //1
+                return true;
             }
+            return false;
         }
         //delete claim info
         private static bool DeleteClaimInfo(byte[] address, byte[] asset)
@@ -313,10 +328,12 @@ namespace Neo.SmartContract
 
 			if (!Runtime.CheckWitness(OWNER)) return false;
 
+            byte[] cr = itx.Script.Range(1, LENGTH_OF_SCRIPTHASH);
 			byte[] conver = GetConver();
             if (conver == null)
             {
-                SetConver(itx.Range(1, LENGTH_OF_SCRIPTHASH));
+                SetConver(cr);
+                ConverSetted(cr);
                 return true;
             }
             return false;
