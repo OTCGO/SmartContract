@@ -88,7 +88,7 @@ namespace Neo.SmartContract
                     if (ai != null) return true;
                     return false;
                 }
-                if (140 == itx.Script.Length) // order
+                if (140 == itx.Script.Length) // new
                 {
 					if (itx.Script[0] != 0x08) return false;
 					if (itx.Script[9] != 0x14) return false;
@@ -127,6 +127,62 @@ namespace Neo.SmartContract
 
 					return true;
                 }
+				if (185 == itx.Script.Length) // trade
+				{
+					if (185 != itx.Script.Length) return false;
+					if (itx.Script[0] != 0x08) return false;
+					if (itx.Script[9] != 0x44) return false;
+					if (itx.Script[78] != 0x08) return false;
+					if (itx.Script[87] != 0x44) return false;
+					if (itx.Script.Range(156, 9) != new byte[] { 0x54, 0xc1, 0x05, 0x74, 0x72, 0x61, 0x64, 0x65, 0x67 }) return false;
+					if(itx.Script.Range(69, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+					BigInteger makerAmount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
+					if (makerAmount <= 0) return false;
+
+					byte[] makerInfo = itx.Script.Range(10, 68);
+					BigInteger amountM = Storage.Get(Storage.CurrentContext, makerInfo).AsBigInteger();
+					if (amountM <= 0 || amountM < makerAmount) return false;
+
+					BigInteger takerAmount = itx.Script.Range(79, LENGTH_OF_AMOUNT).AsBigInteger();
+					if (takerAmount <= 0) return false;
+
+					byte[] takerInfo = itx.Script.Range(88, 68);
+					BigInteger amountT = Storage.Get(Storage.CurrentContext, takerInfo).AsBigInteger();
+					if (amountT <= 0 || amountT < takerAmount) return false;
+
+					byte[] taker = takerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
+					byte[] assetS = takerInfo.Range(20, LENGTH_OF_SCRIPTHASH);
+					byte[] assetB = takerInfo.Range(40, LENGTH_OF_SCRIPTHASH);
+					byte[] maker = makerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
+
+					if (taker == maker) return false;
+					if (assetS != makerInfo.Range(40, LENGTH_OF_SCRIPTHASH)) return false;
+					if (assetB != makerInfo.Range(20, LENGTH_OF_SCRIPTHASH)) return false;
+
+					BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
+					BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
+
+					byte[] aiS = GetAssetInfo(assetS);
+					if (aiS == null) return false;
+					BigInteger decimalsS = GetDecimals(aiS);
+					if (decimalsS < 0) return false;
+					BigInteger totalS = GetTotal(aiS);
+					if (totalS < takerAmount) return false;
+
+					byte[] aiB = GetAssetInfo(assetB);
+					if (aiB == null) return false;
+					BigInteger decimalsB = GetDecimals(aiB);
+					if (decimalsB < 0) return false;
+					BigInteger totalB = GetTotal(aiB);
+					if (tatalB < makerAmount) return false;
+
+					if (takerPrice * makerPrice > 10000000000000000) return false;
+					if (makerPrice * makerAmount * decimalsS != takerAmount * decimalsB) return false;
+					if (takerPrice * takerAmount * decimalsB > makerAmount * decimalsS) return false;
+
+					return true;
+				}
 
                 if (112 == itx.Script.Length) // return
                 {
@@ -439,43 +495,21 @@ namespace Neo.SmartContract
         }
         public static bool NewOrder()
         {
-            byte[] me = GetReceiver();
-            var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
-            if (140 != itx.Script.Length) return false;
-            if (itx.Script[0] != 0x08) return false;
-            if (itx.Script[9] != 0x14) return false;
-            if (itx.Script.Range(30, 7) != new byte[] {0x52, 0xc1, 0x03, 0x6e, 0x65, 0x77, 0x67 }) return false;
-            if (itx.Script[57] != 0x08) return false;
-            if (itx.Script[66] != 0x14) return false;
-            if (itx.Script[87] != 0x14) return false;
-            if (itx.Script.Range(108, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
+            var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer; // length:140
 
             byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
-            if (price.AsBigInteger() <= 0) return false;
 
             byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
             byte[] aiB = GetAssetInfo(assetB);
             if (aiB == null) return false;
 
-            if (itx.Script.Range(37, LENGTH_OF_SCRIPTHASH) != me) return false;
-
             BigInteger amount = itx.Script.Range(58, LENGTH_OF_AMOUNT).AsBigInteger();
-            if (amount <= 0) return false;
-
-            if(itx.Script.Range(67, LENGTH_OF_SCRIPTHASH) != me) return false;
 
             byte[] from = itx.Script.Range(88, LENGTH_OF_SCRIPTHASH);
 
             byte[] assetS = itx.Script.Range(120, LENGTH_OF_SCRIPTHASH);
             byte[] aiS = GetAssetInfo(assetS);
             if (aiS == null) return false;
-
-            if (from == me) return false;
-			if (me == assetS) return false;
-			if (me == assetB) return false;
-			if (from == assetS) return false;
-			if (from == assetB) return false;
-			if (assetB == assetS) return false;
 
             if (!Runtime.CheckWitness(from)) return false;
 
@@ -497,27 +531,17 @@ namespace Neo.SmartContract
         }
         public static bool Trading()
         {
-			byte[] me = GetReceiver();
-			var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
-			if (185 != itx.Script.Length) return false;
-			if (itx.Script[0] != 0x08) return false;
-			if (itx.Script[9] != 0x44) return false;
-			if (itx.Script[78] != 0x08) return false;
-			if (itx.Script[87] != 0x44) return false;
-			if (itx.Script.Range(156, 9) != new byte[] { 0x54, 0xc1, 0x05, 0x74, 0x72, 0x61, 0x64, 0x65, 0x67 }) return false;
-			if(itx.Script.Range(69, LENGTH_OF_SCRIPTHASH) != me) return false;
+			var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer; //length:185
 
 			BigInteger makerAmount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
-			if (makerAmount <= 0) return false;
 
 			byte[] makerInfo = itx.Script.Range(10, 68);
 			BigInteger amountM = Storage.Get(Storage.CurrentContext, makerInfo).AsBigInteger();
 			if (amountM <= 0 || amountM < makerAmount) return false;
 
 			BigInteger takerAmount = itx.Script.Range(79, LENGTH_OF_AMOUNT).AsBigInteger();
-			if (takerAmount <= 0) return false;
 
-			byte[] takerInfo = itx.Script.Range(87, 68);
+			byte[] takerInfo = itx.Script.Range(88, 68);
 			BigInteger amountT = Storage.Get(Storage.CurrentContext, takerInfo).AsBigInteger();
 			if (amountT <= 0 || amountT < takerAmount) return false;
 
@@ -525,10 +549,6 @@ namespace Neo.SmartContract
 			byte[] assetS = takerInfo.Range(20, LENGTH_OF_SCRIPTHASH);
 			byte[] assetB = takerInfo.Range(40, LENGTH_OF_SCRIPTHASH);
 			byte[] maker = makerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
-
-			if (taker == maker) return false;
-			if (assetS != makerInfo.Range(40, LENGTH_OF_SCRIPTHASH)) return false;
-			if (assetB != makerInfo.Range(20, LENGTH_OF_SCRIPTHASH)) return false;
 
 			BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
 			BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
@@ -545,13 +565,9 @@ namespace Neo.SmartContract
 			BigInteger totalB = GetTotal(aiB);
 			if (tatalB < makerAmount) return false;
 
-			if (takerPrice * makerPrice > 10000000000000000) return false;
-			if (makerPrice * makerAmount * decimalsS != takerAmount * decimalsB) return false;
-			if (takerPrice * takerAmount * decimalsB > makerAmount * decimalsS) return false;
-
-			if (takerAmount < amountT) Storage.Put(Storage.CurrentContext, takerInfo, assetS - takerAmount);
+			if (takerAmount < amountT) Storage.Put(Storage.CurrentContext, takerInfo, amountT - takerAmount);
 			if (takerAmount == assetT) Storage.Delete(Storage.CurrentContext, takerInfo);
-			if (makerAmount < amountM) Storage.Put(Storage.CurrentContext, makerInfo, assetB = makerAmount);
+			if (makerAmount < amountM) Storage.Put(Storage.CurrentContext, makerInfo, amountM - makerAmount);
 			if (makerAmount == amountM) Storage.Delete(Storage.CurrentContext, makerInfo);
 
 			SetClaimInfo(taker, assetB, makerAmount);
