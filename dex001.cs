@@ -90,6 +90,42 @@ namespace Neo.SmartContract
                 }
                 if (140 == itx.Script.Length) // order
                 {
+					if (itx.Script[0] != 0x08) return false;
+					if (itx.Script[9] != 0x14) return false;
+					if (itx.Script.Range(30, 7) != new byte[] {0x52, 0xc1, 0x03, 0x6e, 0x65, 0x77, 0x67 }) return false;
+					if (itx.Script[57] != 0x08) return false;
+					if (itx.Script[66] != 0x14) return false;
+					if (itx.Script[87] != 0x14) return false;
+					if (itx.Script.Range(108, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
+
+					byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
+					if (price.AsBigInteger() <= 0) return false;
+
+					byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
+					byte[] aiB = GetAssetInfo(assetB);
+					if (aiB == null) return false;
+
+					if (itx.Script.Range(37, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+					BigInteger amount = itx.Script.Range(58, LENGTH_OF_AMOUNT).AsBigInteger();
+					if (amount <= 0) return false;
+
+					if(itx.Script.Range(67, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+					byte[] from = itx.Script.Range(88, LENGTH_OF_SCRIPTHASH);
+
+					byte[] assetS = itx.Script.Range(120, LENGTH_OF_SCRIPTHASH);
+					byte[] aiS = GetAssetInfo(assetS);
+					if (aiS == null) return false;
+
+					if (from == me) return false;
+					if (me == assetS) return false;
+					if (me == assetB) return false;
+					if (from == assetS) return false;
+					if (from == assetB) return false;
+					if (assetB == assetS) return false;
+
+					return true;
                 }
 
                 if (112 == itx.Script.Length) // return
@@ -408,37 +444,45 @@ namespace Neo.SmartContract
             if (140 != itx.Script.Length) return false;
             if (itx.Script[0] != 0x08) return false;
             if (itx.Script[9] != 0x14) return false;
-            if (itx.Script[30] != 0x14) return false;
-            if (itx.Script.Range(51, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
-            if (itx.Script[83] != 0x08) return false;
-            if (itx.Script[92] != 0x14) return false;
-            if (itx.Script.Range(113, 7) != new byte[] {0x52, 0xc1, 0x03, 0x6e, 0x65, 0x77, 0x67 }) return false;
+            if (itx.Script.Range(30, 7) != new byte[] {0x52, 0xc1, 0x03, 0x6e, 0x65, 0x77, 0x67 }) return false;
+            if (itx.Script[57] != 0x08) return false;
+            if (itx.Script[66] != 0x14) return false;
+            if (itx.Script[87] != 0x14) return false;
+            if (itx.Script.Range(108, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
 
-            BigInteger amount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
+            byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
+            if (price.AsBigInteger() <= 0) return false;
+
+            byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
+            byte[] aiB = GetAssetInfo(assetB);
+            if (aiB == null) return false;
+
+            if (itx.Script.Range(37, LENGTH_OF_SCRIPTHASH) != me) return false;
+
+            BigInteger amount = itx.Script.Range(58, LENGTH_OF_AMOUNT).AsBigInteger();
             if (amount <= 0) return false;
 
-            if(itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != me) return false;
+            if(itx.Script.Range(67, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-            byte[] from = itx.Script.Range(31, LENGTH_OF_SCRIPTHASH);
-            byte[] assetS = itx.Script.Range(63, LENGTH_OF_SCRIPTHASH);
+            byte[] from = itx.Script.Range(88, LENGTH_OF_SCRIPTHASH);
+
+            byte[] assetS = itx.Script.Range(120, LENGTH_OF_SCRIPTHASH);
+            byte[] aiS = GetAssetInfo(assetS);
+            if (aiS == null) return false;
+
             if (from == me) return false;
+			if (me == assetS) return false;
+			if (me == assetB) return false;
+			if (from == assetS) return false;
+			if (from == assetB) return false;
+			if (assetB == assetS) return false;
+
             if (!Runtime.CheckWitness(from)) return false;
+
             var balanceArgs = new object[] { from };
             var contract = (NEP5Contract)assetS.ToDelegate();
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
             if (amount > balanceResult) return false;
-
-            byte[] aiS = GetAssetInfo(assetS);
-            if (aiS == null) return false;
-
-            byte[] price = itx.Script.Range(84, LENGTH_OF_PRICE);
-            if (price.AsBigInteger() <= 0) return false;
-
-            byte[] assetB = itx.Script.Range(93, LENGTH_OF_SCRIPTHASH);
-            byte[] aiB = GetAssetInfo(assetB);
-            if (aiB == null) return false;
-
-            if (itx.Script.Range(120, LENGTH_OF_SCRIPTHASH) != me) return false;
 
             byte[] new_order = from.Concat(assetS).Concat(assetB).Concat(price);
             BigInteger old_amount = Storage.Get(Storage.CurrentContext, new_order).AsBigInteger();
