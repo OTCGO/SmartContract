@@ -59,7 +59,7 @@ namespace Neo.SmartContract
                 if (51 == itx.Script.Length) // deploy
                 {
                     if (itx.Script[0] != 0x14) return false;
-                    if (itx.Script.Range(21, 10) != new byte[] { 0x51, 0xc1, 0x06, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x67}) return false;
+                    if (itx.Script.Range(21, 10) != new byte[] { 0x51, 0xc1, 0x06, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x67 }) return false;
                     if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
 
                     byte[] conver = GetConver();
@@ -90,126 +90,126 @@ namespace Neo.SmartContract
                 }
                 if (140 == itx.Script.Length) // new
                 {
-					if (itx.Script[0] != 0x08) return false;
-					if (itx.Script[9] != 0x14) return false;
-					if (itx.Script.Range(30, 7) != new byte[] {0x52, 0xc1, 0x03, 0x6e, 0x65, 0x77, 0x67 }) return false;
-					if (itx.Script[57] != 0x08) return false;
-					if (itx.Script[66] != 0x14) return false;
-					if (itx.Script[87] != 0x14) return false;
-					if (itx.Script.Range(108, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
+                    if (itx.Script[0] != 0x08) return false;
+                    if (itx.Script[9] != 0x14) return false;
+                    if (itx.Script.Range(30, 7) != new byte[] { 0x52, 0xc1, 0x03, 0x6e, 0x65, 0x77, 0x67 }) return false;
+                    if (itx.Script[57] != 0x08) return false;
+                    if (itx.Script[66] != 0x14) return false;
+                    if (itx.Script[87] != 0x14) return false;
+                    if (itx.Script.Range(108, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
 
-					byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
-					if (price.AsBigInteger() <= 0) return false;
+                    byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
+                    if (price.AsBigInteger() <= 0) return false;
 
-					byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
-					byte[] aiB = GetAssetInfo(assetB);
-					if (aiB == null) return false;
+                    byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
+                    byte[] aiB = GetAssetInfo(assetB);
+                    if (aiB == null) return false;
 
-					if (itx.Script.Range(37, LENGTH_OF_SCRIPTHASH) != me) return false;
+                    if (itx.Script.Range(37, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-					BigInteger amount = itx.Script.Range(58, LENGTH_OF_AMOUNT).AsBigInteger();
-					if (amount <= 0) return false;
+                    BigInteger amount = itx.Script.Range(58, LENGTH_OF_AMOUNT).AsBigInteger();
+                    if (amount <= 0) return false;
 
-					if(itx.Script.Range(67, LENGTH_OF_SCRIPTHASH) != me) return false;
+                    if (itx.Script.Range(67, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-					byte[] from = itx.Script.Range(88, LENGTH_OF_SCRIPTHASH);
+                    byte[] from = itx.Script.Range(88, LENGTH_OF_SCRIPTHASH);
 
-					byte[] assetS = itx.Script.Range(120, LENGTH_OF_SCRIPTHASH);
-					byte[] aiS = GetAssetInfo(assetS);
-					if (aiS == null) return false;
+                    byte[] assetS = itx.Script.Range(120, LENGTH_OF_SCRIPTHASH);
+                    byte[] aiS = GetAssetInfo(assetS);
+                    if (aiS == null) return false;
 
-					if (from == me) return false;
-					if (me == assetS) return false;
-					if (me == assetB) return false;
-					if (from == assetS) return false;
-					if (from == assetB) return false;
-					if (assetB == assetS) return false;
+                    if (from == me) return false;
+                    if (me == assetS) return false;
+                    if (me == assetB) return false;
+                    if (from == assetS) return false;
+                    if (from == assetB) return false;
+                    if (assetB == assetS) return false;
 
-					return true;
+                    return true;
                 }
-				if (185 == itx.Script.Length) // trade
-				{
-					if (185 != itx.Script.Length) return false;
-					if (itx.Script[0] != 0x08) return false;
-					if (itx.Script[9] != 0x44) return false;
-					if (itx.Script[78] != 0x08) return false;
-					if (itx.Script[87] != 0x44) return false;
-					if (itx.Script.Range(156, 9) != new byte[] { 0x54, 0xc1, 0x05, 0x74, 0x72, 0x61, 0x64, 0x65, 0x67 }) return false;
-					if(itx.Script.Range(69, LENGTH_OF_SCRIPTHASH) != me) return false;
+                if (185 == itx.Script.Length) // trade
+                {
+                    if (185 != itx.Script.Length) return false;
+                    if (itx.Script[0] != 0x08) return false;
+                    if (itx.Script[9] != 0x44) return false;
+                    if (itx.Script[78] != 0x08) return false;
+                    if (itx.Script[87] != 0x44) return false;
+                    if (itx.Script.Range(156, 9) != new byte[] { 0x54, 0xc1, 0x05, 0x74, 0x72, 0x61, 0x64, 0x65, 0x67 }) return false;
+                    if (itx.Script.Range(69, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-					BigInteger makerAmount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
-					if (makerAmount <= 0) return false;
+                    BigInteger makerAmount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
+                    if (makerAmount <= 0) return false;
 
-					byte[] makerInfo = itx.Script.Range(10, 68);
-					BigInteger amountM = Storage.Get(Storage.CurrentContext, makerInfo).AsBigInteger();
-					if (amountM <= 0 || amountM < makerAmount) return false;
+                    byte[] makerInfo = itx.Script.Range(10, 68);
+                    BigInteger amountM = Storage.Get(Storage.CurrentContext, makerInfo).AsBigInteger();
+                    if (amountM <= 0 || amountM < makerAmount) return false;
 
-					BigInteger takerAmount = itx.Script.Range(79, LENGTH_OF_AMOUNT).AsBigInteger();
-					if (takerAmount <= 0) return false;
+                    BigInteger takerAmount = itx.Script.Range(79, LENGTH_OF_AMOUNT).AsBigInteger();
+                    if (takerAmount <= 0) return false;
 
-					byte[] takerInfo = itx.Script.Range(88, 68);
-					BigInteger amountT = Storage.Get(Storage.CurrentContext, takerInfo).AsBigInteger();
-					if (amountT <= 0 || amountT < takerAmount) return false;
+                    byte[] takerInfo = itx.Script.Range(88, 68);
+                    BigInteger amountT = Storage.Get(Storage.CurrentContext, takerInfo).AsBigInteger();
+                    if (amountT <= 0 || amountT < takerAmount) return false;
 
-					byte[] taker = takerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
-					byte[] assetS = takerInfo.Range(20, LENGTH_OF_SCRIPTHASH);
-					byte[] assetB = takerInfo.Range(40, LENGTH_OF_SCRIPTHASH);
-					byte[] maker = makerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
+                    byte[] taker = takerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
+                    byte[] assetS = takerInfo.Range(20, LENGTH_OF_SCRIPTHASH);
+                    byte[] assetB = takerInfo.Range(40, LENGTH_OF_SCRIPTHASH);
+                    byte[] maker = makerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
 
-					if (taker == maker) return false;
-					if (assetS != makerInfo.Range(40, LENGTH_OF_SCRIPTHASH)) return false;
-					if (assetB != makerInfo.Range(20, LENGTH_OF_SCRIPTHASH)) return false;
+                    if (taker == maker) return false;
+                    if (assetS != makerInfo.Range(40, LENGTH_OF_SCRIPTHASH)) return false;
+                    if (assetB != makerInfo.Range(20, LENGTH_OF_SCRIPTHASH)) return false;
 
-					BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
-					BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
+                    BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
+                    BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
 
-					byte[] aiS = GetAssetInfo(assetS);
-					if (aiS == null) return false;
-					BigInteger decimalsS = GetDecimals(aiS);
-					if (decimalsS < 0) return false;
-					BigInteger totalS = GetTotal(aiS);
-					if (totalS < takerAmount) return false;
+                    byte[] aiS = GetAssetInfo(assetS);
+                    if (aiS == null) return false;
+                    BigInteger decimalsS = GetDecimals(aiS);
+                    if (decimalsS < 0) return false;
+                    BigInteger totalS = GetTotal(aiS);
+                    if (totalS < takerAmount) return false;
 
-					byte[] aiB = GetAssetInfo(assetB);
-					if (aiB == null) return false;
-					BigInteger decimalsB = GetDecimals(aiB);
-					if (decimalsB < 0) return false;
-					BigInteger totalB = GetTotal(aiB);
-					if (tatalB < makerAmount) return false;
+                    byte[] aiB = GetAssetInfo(assetB);
+                    if (aiB == null) return false;
+                    BigInteger decimalsB = GetDecimals(aiB);
+                    if (decimalsB < 0) return false;
+                    BigInteger totalB = GetTotal(aiB);
+                    if (totalB < makerAmount) return false;
 
-					if (takerPrice * makerPrice > 10000000000000000) return false;
-					if (makerPrice * makerAmount * decimalsS != takerAmount * decimalsB) return false;
-					if (takerPrice * takerAmount * decimalsB > makerAmount * decimalsS) return false;
+                    if (takerPrice * makerPrice > 10000000000000000) return false;
+                    if (makerPrice * makerAmount * decimalsS != takerAmount * decimalsB) return false;
+                    if (takerPrice * takerAmount * decimalsB > makerAmount * decimalsS) return false;
 
-					return true;
-				}
+                    return true;
+                }
                 if (102 == itx.Script.Length) // cancel
-				{
-					if (itx.Script[0] != 0x08) return false;
-					if (itx.Script[9] != 0x14) return false;
-					if (itx.Script[30] != 0x14) return false;
-					if (itx.Script[51] != 0x14) return false;
-					if (itx.Script.Range(72, 10) != new byte[] { 0x54, 0xc1, 0x06, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x67 }) return false;
-					if(itx.Script.Range(82, LENGTH_OF_SCRIPTHASH) != me) return false;
+                {
+                    if (itx.Script[0] != 0x08) return false;
+                    if (itx.Script[9] != 0x14) return false;
+                    if (itx.Script[30] != 0x14) return false;
+                    if (itx.Script[51] != 0x14) return false;
+                    if (itx.Script.Range(72, 10) != new byte[] { 0x54, 0xc1, 0x06, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x67 }) return false;
+                    if (itx.Script.Range(82, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-					byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
-					if (price.AsBigInteger() <= 0) return false;
-					byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
-					byte[] assetS = itx.Script.Range(31, LENGTH_OF_SCRIPTHASH);
-					byte[] from = itx.Script.Range(52, LENGTH_OF_SCRIPTHASH);
-					if (from == me) return false;
-					if (me == assetS) return false;
-					if (me == assetB) return false;
-					if (from == assetB) return false;
-					if (from == assetS) return false;
-					if (assetS == assetB) return false;
+                    byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
+                    if (price.AsBigInteger() <= 0) return false;
+                    byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
+                    byte[] assetS = itx.Script.Range(31, LENGTH_OF_SCRIPTHASH);
+                    byte[] from = itx.Script.Range(52, LENGTH_OF_SCRIPTHASH);
+                    if (from == me) return false;
+                    if (me == assetS) return false;
+                    if (me == assetB) return false;
+                    if (from == assetB) return false;
+                    if (from == assetS) return false;
+                    if (assetS == assetB) return false;
 
-					byte[] order = from.Concat(assetS).Concat(assetB).Concat(price);
-					BigInteger amount = Storage.Get(Storage.CurrentContext, order).AsBigInteger();
+                    byte[] order = from.Concat(assetS).Concat(assetB).Concat(price);
+                    BigInteger amount = Storage.Get(Storage.CurrentContext, order).AsBigInteger();
 
-					if (amount > 0) return true;
-					return false;
-				}
+                    if (amount > 0) return true;
+                    return false;
+                }
 
                 if (112 == itx.Script.Length) // return
                 {
@@ -221,8 +221,8 @@ namespace Neo.SmartContract
 
                     BigInteger amount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
                     if (amount <= 0) return false;
-                    if(itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != OWNER) return false;
-                    if(itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
+                    if (itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != OWNER) return false;
+                    if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
                     byte[] asset = itx.Script.Range(63, LENGTH_OF_SCRIPTHASH);
                     if (itx.Script.Range(92, LENGTH_OF_SCRIPTHASH) != me) return false;
 
@@ -239,58 +239,59 @@ namespace Neo.SmartContract
                 if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
                 if (operation == "deploy")
                 {
-                    #set conver
+                    // set conver
                     if (args.Length != 1) return false;
                     byte[] conver = (byte[])args[0];
                     return Deploy(conver);
                 }
                 if (operation == "support")
                 {
-                    #support new asset
+                    // support new asset
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
                     return SupportAsset(asset);
                 }
                 if (operation == "unsupport")
                 {
-                    #unsupport asset
+                    // unsupport asset
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
                     return UNSupportAsset(asset);
                 }
                 if (operation == "new")
                 {
-                    #new order
+                    // new order
                     if (args.Length != 2) return false;
                     return NewOrder();
                 }
                 if (operation == "trade")
                 {
-                    #trade
+                    // trade
                     if (args.Length != 4) return false;
                     return Trading();
                 }
                 if (operation == "cancel")
                 {
-                    #cancel order
+                    // cancel order
                     if (args.Length != 4) return false;
                     return CancelOrder();
                 }
-                if (operation == "claim"){
-                    #claim assetA|assetB to buyer
+                if (operation == "claim")
+                {
+                    // claim assetA|assetB to buyer
                     if (args.Length != 1) return false;
                     return Claiming();
                 }
                 if (operation == "setreturn")
                 {
-                    #return asset to OWNER
+                    // return asset to OWNER
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
                     return SetReturnAsset(asset);
                 }
                 if (operation == "return")
                 {
-                    #return asset to OWNER
+                    // return asset to OWNER
                     if (args.Length != 0) return false;
                     return ReturnAsset();
                 }
@@ -381,12 +382,12 @@ namespace Neo.SmartContract
         // set claim info
         private static bool SetClaimInfo(byte[] address, byte[] asset, BigInteger amount)
         {
-			if (address.Length != LENGTH_OF_SCRIPTHASH) return false;
-			if (asset.Length != LENGTH_OF_SCRIPTHASH) return false;
+            if (address.Length != LENGTH_OF_SCRIPTHASH) return false;
+            if (asset.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (amount <= 0) return false;
             byte[] claimInfo = RETURN_PREFIX.Concat(address).Concat(asset);
             BigInteger old_amount = Storage.Get(Storage.CurrentContext, claimInfo).AsBigInteger();
-			if (old_amount < 0) return  false;
+            if (old_amount < 0) return false;
             Storage.Put(Storage.CurrentContext, claimInfo, old_amount + amount);
             return true;
         }
@@ -401,7 +402,7 @@ namespace Neo.SmartContract
             {
                 throw new InvalidOperationException("The parameter info's length SHOULD == 16.");
             }
-            return info.Range(0,8).AsBigInteger();
+            return info.Range(0, 8).AsBigInteger();
         }
         // get total from asset info
         private static BigInteger GetTotal(byte[] info)
@@ -424,7 +425,7 @@ namespace Neo.SmartContract
         }
         private static byte[] GetConver()
         {
-			byte[] conver = Storage.Get(Storage.CurrentContext, CONVER);
+            byte[] conver = Storage.Get(Storage.CurrentContext, CONVER);
             if (conver.Length != LENGTH_OF_SCRIPTHASH) return null;
             return conver;
         }
@@ -437,7 +438,7 @@ namespace Neo.SmartContract
         private static BigInteger GetReturnAmount(byte[] asset)
         {
             byte[] key = RETURN_PREFIX.Concat(asset);
-            BigInteger delta = (BigInteger)Storage.Get(Storage.CurrentContext, key);//0.1
+            BigInteger delta = Storage.Get(Storage.CurrentContext, key).AsBigInteger();//0.1
             return delta;
         }
         private static bool DelReturnAmount(byte[] asset)
@@ -449,9 +450,9 @@ namespace Neo.SmartContract
 
         public static bool Deploy(byte[] conver)
         {
-			if (!Runtime.CheckWitness(OWNER)) return false;
+            if (!Runtime.CheckWitness(OWNER)) return false;
 
-			byte[] cr = GetConver();
+            byte[] cr = GetConver();
             if (cr == null)
             {
                 bool sc = SetConver(conver);
@@ -537,122 +538,122 @@ namespace Neo.SmartContract
         }
         public static bool Trading()
         {
-			var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer; //length:185
+            var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer; //length:185
 
-			BigInteger makerAmount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
+            BigInteger makerAmount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
 
-			byte[] makerInfo = itx.Script.Range(10, 68);
-			BigInteger amountM = Storage.Get(Storage.CurrentContext, makerInfo).AsBigInteger();
-			if (amountM <= 0 || amountM < makerAmount) return false;
+            byte[] makerInfo = itx.Script.Range(10, 68);
+            BigInteger amountM = Storage.Get(Storage.CurrentContext, makerInfo).AsBigInteger();
+            if (amountM <= 0 || amountM < makerAmount) return false;
 
-			BigInteger takerAmount = itx.Script.Range(79, LENGTH_OF_AMOUNT).AsBigInteger();
+            BigInteger takerAmount = itx.Script.Range(79, LENGTH_OF_AMOUNT).AsBigInteger();
 
-			byte[] takerInfo = itx.Script.Range(88, 68);
-			BigInteger amountT = Storage.Get(Storage.CurrentContext, takerInfo).AsBigInteger();
-			if (amountT <= 0 || amountT < takerAmount) return false;
+            byte[] takerInfo = itx.Script.Range(88, 68);
+            BigInteger amountT = Storage.Get(Storage.CurrentContext, takerInfo).AsBigInteger();
+            if (amountT <= 0 || amountT < takerAmount) return false;
 
-			byte[] taker = takerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
-			byte[] assetS = takerInfo.Range(20, LENGTH_OF_SCRIPTHASH);
-			byte[] assetB = takerInfo.Range(40, LENGTH_OF_SCRIPTHASH);
-			byte[] maker = makerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
+            byte[] taker = takerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
+            byte[] assetS = takerInfo.Range(20, LENGTH_OF_SCRIPTHASH);
+            byte[] assetB = takerInfo.Range(40, LENGTH_OF_SCRIPTHASH);
+            byte[] maker = makerInfo.Range(0, LENGTH_OF_SCRIPTHASH);
 
-			BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
-			BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
+            BigInteger takerPrice = takerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
+            BigInteger makerPrice = makerInfo.Range(60, LENGTH_OF_AMOUNT).AsBigInteger();
 
-			byte[] aiS = GetAssetInfo(assetS);
+            byte[] aiS = GetAssetInfo(assetS);
             if (aiS == null) return false;
-			BigInteger decimalsS = GetDecimals(aiS);
-			BigInteger totalS = GetTotal(aiS);
-			if (totalS < takerAmount) return false;
+            BigInteger decimalsS = GetDecimals(aiS);
+            BigInteger totalS = GetTotal(aiS);
+            if (totalS < takerAmount) return false;
 
-			byte[] aiB = GetAssetInfo(assetB);
+            byte[] aiB = GetAssetInfo(assetB);
             if (aiB == null) return false;
-			BigInteger decimalsB = GetDecimals(aiB);
-			BigInteger totalB = GetTotal(aiB);
-			if (tatalB < makerAmount) return false;
+            BigInteger decimalsB = GetDecimals(aiB);
+            BigInteger totalB = GetTotal(aiB);
+            if (totalB < makerAmount) return false;
 
-			if (takerAmount < amountT) Storage.Put(Storage.CurrentContext, takerInfo, amountT - takerAmount);
-			if (takerAmount == assetT) Storage.Delete(Storage.CurrentContext, takerInfo);
-			if (makerAmount < amountM) Storage.Put(Storage.CurrentContext, makerInfo, amountM - makerAmount);
-			if (makerAmount == amountM) Storage.Delete(Storage.CurrentContext, makerInfo);
+            if (takerAmount < amountT) Storage.Put(Storage.CurrentContext, takerInfo, amountT - takerAmount);
+            if (takerAmount == amountT) Storage.Delete(Storage.CurrentContext, takerInfo);
+            if (makerAmount < amountM) Storage.Put(Storage.CurrentContext, makerInfo, amountM - makerAmount);
+            if (makerAmount == amountM) Storage.Delete(Storage.CurrentContext, makerInfo);
 
-			bool t = SetClaimInfo(taker, assetB, makerAmount);
-			if (t == false) return false;
-			bool m = SetClaimInfo(maker, assetS, takerAmount);
-			if (m == false) return false;
+            bool t = SetClaimInfo(taker, assetB, makerAmount);
+            if (t == false) return false;
+            bool m = SetClaimInfo(maker, assetS, takerAmount);
+            if (m == false) return false;
 
-			OrderTraded(takerInfo.Range(20,40), taker, null, takerAmount);
-			OrderTraded(makerInfo.Range(20,40), maker, makerPrice, makerAmount);
-			return true;
+            OrderTraded(takerInfo.Range(20, 40), taker, 0, takerAmount);
+            OrderTraded(makerInfo.Range(20, 40), maker, makerPrice, makerAmount);
+            return true;
         }
         public static bool CancelOrder()
         {
-			var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer; // length:102
+            var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer; // length:102
 
-			byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
-			byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
-			byte[] assetS = itx.Script.Range(31, LENGTH_OF_SCRIPTHASH);
-			byte[] from = itx.Script.Range(52, LENGTH_OF_SCRIPTHASH);
+            byte[] price = itx.Script.Range(1, LENGTH_OF_PRICE);
+            byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
+            byte[] assetS = itx.Script.Range(31, LENGTH_OF_SCRIPTHASH);
+            byte[] from = itx.Script.Range(52, LENGTH_OF_SCRIPTHASH);
 
-			byte[] order = from.Concat(assetS).Concat(assetB).Concat(price);
-			BigInteger amount = Storage.Get(Storage.CurrentContext, order).AsBigInteger();
+            byte[] order = from.Concat(assetS).Concat(assetB).Concat(price);
+            BigInteger amount = Storage.Get(Storage.CurrentContext, order).AsBigInteger();
 
-			if (amount > 0)
-			{
-				Storage.Delete(Storage.CurrentContext, order);
-				bool r = SetClaimInfo(from, assetS, amount);
-				if (r == true)
-				{
-					OrderCanelled(from, assetS, assetB, price, amount);
-					return true;
-				}
-			}
-			return false;
+            if (amount > 0)
+            {
+                Storage.Delete(Storage.CurrentContext, order);
+                bool r = SetClaimInfo(from, assetS, amount);
+                if (r == true)
+                {
+                    OrderCanelled(from, assetS, assetB, price, amount);
+                    return true;
+                }
+            }
+            return false;
         }
         public static bool Claiming()
         {
-			byte[] me = GetReceiver();
-			var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
-			if (199 != itx.Script.Length) return false;
-			if (itx.Script[0] != 0x03) return false;
-			if (itx.Script.Range(1,12) != new byte[] {0x53, 0x45, 0x41, 0x51, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67}) return false;
-			if(itx.Script.Range(13, LENGTH_OF_SCRIPTHASH) != me) return false;
-			if (itx.Script[33] != 0x08) return false;
-			if (itx.Script[42] != 0x14) return false;
-			if (itx.Script[63] != 0x14) return false;
-			if (itx.Script.Range(84, 12) != new byte[] {0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67}) return false;
-			if (itx.Script[116] != 0x08) return false;
-			if (itx.Script[125] != 0x14) return false;
-			if (itx.Script[146] != 0x14) return false;
-			if (itx.Script.Range(167, 12) != new byte[] {0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67}) return false;
+            byte[] me = GetReceiver();
+            var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
+            if (199 != itx.Script.Length) return false;
+            if (itx.Script[0] != 0x03) return false;
+            if (itx.Script.Range(1, 12) != new byte[] { 0x53, 0x45, 0x41, 0x51, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67 }) return false;
+            if (itx.Script.Range(13, LENGTH_OF_SCRIPTHASH) != me) return false;
+            if (itx.Script[33] != 0x08) return false;
+            if (itx.Script[42] != 0x14) return false;
+            if (itx.Script[63] != 0x14) return false;
+            if (itx.Script.Range(84, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
+            if (itx.Script[116] != 0x08) return false;
+            if (itx.Script[125] != 0x14) return false;
+            if (itx.Script[146] != 0x14) return false;
+            if (itx.Script.Range(167, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
 
-			BigInteger amountX = itx.Script.Range(34, LENGTH_OF_AMOUNT).AsBigInteger();
-			if (amountX < 0) return false;
-			byte[] conver = GetConver();
+            BigInteger amountX = itx.Script.Range(34, LENGTH_OF_AMOUNT).AsBigInteger();
+            if (amountX < 0) return false;
+            byte[] conver = GetConver();
             if (conver == null) return false;
-			if (itx.Script.Range(43, LENGTH_OF_SCRIPTHASH) != conver) return false;
-			if (itx.Script.Range(64, LENGTH_OF_SCRIPTHASH) != me) return false;
+            if (itx.Script.Range(43, LENGTH_OF_SCRIPTHASH) != conver) return false;
+            if (itx.Script.Range(64, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-			byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
-			if (itx.Script.Range(179, LENGTH_OF_SCRIPTHASH) != asset) return false;
+            byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
+            if (itx.Script.Range(179, LENGTH_OF_SCRIPTHASH) != asset) return false;
 
-			BigInteger amountC = itx.Script.Range(117, LENGTH_OF_AMOUNT).AsBigInteger();
-			if (amountC <= 0) return false;
-			byte[] claimer = itx.Script.Range(126, LENGTH_OF_SCRIPTHASH);
-			if (claimer == me) return false;
-			if (itx.Script.Range(147, LENGTH_OF_SCRIPTHASH) != me) return false;
+            BigInteger amountC = itx.Script.Range(117, LENGTH_OF_AMOUNT).AsBigInteger();
+            if (amountC <= 0) return false;
+            byte[] claimer = itx.Script.Range(126, LENGTH_OF_SCRIPTHASH);
+            if (claimer == me) return false;
+            if (itx.Script.Range(147, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-			if (!Runtime.CheckWitness(me)) return false;
+            if (!Runtime.CheckWitness(me)) return false;
 
-			byte[] claimInfo = RETURN_PREFIX.Concat(claimer).Concat(asset);
-			BigInteger cliamAmount = Storage.Get(Storage.CurrentContext, claimInfo).AsBigInteger();
-			if (claimAmount == 0) return false;
-			if (claimAmount != amountC) return false;
+            byte[] claimInfo = RETURN_PREFIX.Concat(claimer).Concat(asset);
+            BigInteger claimAmount = Storage.Get(Storage.CurrentContext, claimInfo).AsBigInteger();
+            if (claimAmount == 0) return false;
+            if (claimAmount != amountC) return false;
 
-			var balanceArgs = new object[] { me };
-			var contract = (NEP5Contract)asset.ToDelegate();
-			BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
-			if (balanceResult != amountX + amountC) return false;
+            var balanceArgs = new object[] { me };
+            var contract = (NEP5Contract)asset.ToDelegate();
+            BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
+            if (balanceResult != amountX + amountC) return false;
 
             byte[] aiS = GetAssetInfo(asset);
             if (aiS == null) return false;
@@ -661,10 +662,10 @@ namespace Neo.SmartContract
             if (total < amountC) return false;
             SetAssetInfo(asset, decimals, total - amountC);
 
-			DelClaimInfo(claimer, asset);
+            DelClaimInfo(claimer, asset);
 
-			Claimed(claimer, asset, amountC);
-			return true;
+            Claimed(claimer, asset, amountC);
+            return true;
         }
         public static bool SetReturnAsset(byte[] asset)
         {
@@ -680,7 +681,7 @@ namespace Neo.SmartContract
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
             if (balanceResult <= total) return false;
 
-            BigInteger delta = balanceArgs - total;
+            BigInteger delta = balanceResult - total;
             SetReturnAmount(asset, delta);
             ReturnSet(asset, delta);
             return true;
@@ -698,8 +699,8 @@ namespace Neo.SmartContract
 
             BigInteger amount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
             if (amount <= 0) return false;
-            if(itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != OWNER) return false;
-            if(itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
+            if (itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != OWNER) return false;
+            if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
             byte[] asset = itx.Script.Range(63, LENGTH_OF_SCRIPTHASH);
             if (itx.Script.Range(92, LENGTH_OF_SCRIPTHASH) != me) return false;
             if (!Runtime.CheckWitness(me)) return false;
