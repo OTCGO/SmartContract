@@ -10,6 +10,7 @@ namespace Neo.SmartContract
 {
     public class DEX : Framework.SmartContract
     {
+        private static readonly byte[] GAS = { 231, 45, 40, 105, 121, 238, 108, 177, 183, 230, 93, 253, 223, 178, 227, 132, 16, 11, 141, 20, 142, 119, 88, 222, 66, 228, 22, 139, 113, 121, 44, 96 };
         public static readonly byte[] OWNER = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
         private const int LENGTH_OF_SCRIPTHASH = 20;
@@ -55,6 +56,26 @@ namespace Neo.SmartContract
                 var type = tx.Type;
                 if (type != INVOCATION_TRANSACTION_TYPE) return false;
                 var itx = (InvocationTransaction)tx;
+
+                ulong gas_input = 0;
+                ulong gas_output = 0;
+                TransactionOutput[] reference = itx.GetReferences();
+                foreach (TransactionOutput output in reference)
+                {
+                    if (output.AssetId == GAS)
+                    {
+                         gas_input += (ulong)output.Value;
+                    }
+                }
+                TransactionOutput[] outputs = tx.GetOutputs();
+                foreach (TransactionOutput output in outputs)
+                {
+                    if (output.AssetId == GAS)
+                    {
+                        gas_output += (ulong)output.Value;
+                    }
+                }
+                if (gas_input - gas_output > 5000000000) return false;
 
                 if (51 == itx.Script.Length) // deploy
                 {
