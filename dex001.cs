@@ -10,6 +10,7 @@ namespace Neo.SmartContract
 {
     public class DEX : Framework.SmartContract
     {
+		private static readonly byte[] PUK = { 3, 155, 44, 107, 138, 136, 56, 89, 91, 142, 188, 198, 123, 188, 133, 206, 199, 141, 128, 93, 86, 137, 14, 154, 13, 113, 188, 174, 137, 102, 67, 57, 214 };
         private static readonly byte[] GAS = { 231, 45, 40, 105, 121, 238, 108, 177, 183, 230, 93, 253, 223, 178, 227, 132, 16, 11, 141, 20, 142, 119, 88, 222, 66, 228, 22, 139, 113, 121, 44, 96 };
         public static readonly byte[] OWNER = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
@@ -412,6 +413,16 @@ namespace Neo.SmartContract
             Storage.Put(Storage.CurrentContext, claimInfo, old_amount + amount);
             return true;
         }
+		// get claim info
+        private static byte[] GetClaimInfo(byte[] address, byte[] asset)
+        {
+            if (address.Length != LENGTH_OF_SCRIPTHASH) return null;
+            if (asset.Length != LENGTH_OF_SCRIPTHASH) return null;
+            byte[] claimInfo = RETURN_PREFIX.Concat(address).Concat(asset);
+            byte[] amount = Storage.Get(Storage.CurrentContext, claimInfo);
+            if (amount.AsBigInteger() <= 0) return null;
+            return amount;
+        }
         // get decimals from asset info
         private static BigInteger GetDecimals(byte[] info)
         {
@@ -635,57 +646,44 @@ namespace Neo.SmartContract
         {
             byte[] me = GetReceiver();
             var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
-            if (199 != itx.Script.Length) return false;
-            if (itx.Script[0] != 0x03) return false;
-            if (itx.Script.Range(1, 12) != new byte[] { 0x53, 0x45, 0x41, 0x51, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67 }) return false;
-            if (itx.Script.Range(13, LENGTH_OF_SCRIPTHASH) != me) return false;
-            if (itx.Script[33] != 0x08) return false;
-            if (itx.Script[42] != 0x14) return false;
-            if (itx.Script[63] != 0x14) return false;
-            if (itx.Script.Range(84, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
-            if (itx.Script[116] != 0x08) return false;
-            if (itx.Script[125] != 0x14) return false;
-            if (itx.Script[146] != 0x14) return false;
-            if (itx.Script.Range(167, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
+            if (112 != itx.Script.Length) return Validator.Register(PUK);
+			if (itx.Script.Range(0, 9) != new byte[] { 0x00, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67 }) return Validator.Register(PUK);
+			if (itx.Script.Range(9, LENGTH_OF_SCRIPTHASH) != me) return Validator.Register(PUK);
+			if (itx.Script[29] != 0x08) return Validator.Register(PUK);
+			if (itx.Script[38] != 0x14) return Validator.Register(PUK);
+			if (itx.Script[59] != 0x14) return Validator.Register(PUK);
+			if (itx.Script.Range(60, LENGTH_OF_SCRIPTHASH) != me) return Validator.Register(PUK);
+            if (itx.Script.Range(80, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return Validator.Register(PUK);
 
-            BigInteger amountX = itx.Script.Range(34, LENGTH_OF_AMOUNT).AsBigInteger();
-            if (amountX < 0) return false;
-            byte[] conver = GetConver();
-            if (conver == null) return false;
-            if (itx.Script.Range(43, LENGTH_OF_SCRIPTHASH) != conver) return false;
-            if (itx.Script.Range(64, LENGTH_OF_SCRIPTHASH) != me) return false;
+			BigInteger amount = itx.Script.Range(30, LENGTH_OF_AMOUNT).AsBigInteger();
+			if (amount <= 0)  return Validator.Register(PUK);
+
+            byte[] to = itx.Script.Range(39, LENGTH_OF_SCRIPTHASH);
+            if (to == me) return Validator.Register(PUK);
+            if (!Runtime.CheckWitness(to)) return Validator.Register(PUK);
 
             byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
-            if (itx.Script.Range(179, LENGTH_OF_SCRIPTHASH) != asset) return false;
 
-            BigInteger amountC = itx.Script.Range(117, LENGTH_OF_AMOUNT).AsBigInteger();
-            if (amountC <= 0) return false;
-            byte[] claimer = itx.Script.Range(126, LENGTH_OF_SCRIPTHASH);
-            if (claimer == me) return false;
-            if (itx.Script.Range(147, LENGTH_OF_SCRIPTHASH) != me) return false;
-
-            if (!Runtime.CheckWitness(me)) return false;
-
-            byte[] claimInfo = RETURN_PREFIX.Concat(claimer).Concat(asset);
-            BigInteger claimAmount = Storage.Get(Storage.CurrentContext, claimInfo).AsBigInteger();
-            if (claimAmount == 0) return false;
-            if (claimAmount != amountC) return false;
+            byte[] amount_byte = GetClaimInfo(to, asset);
+            if (amount_byte == null) return Validator.Register(PUK);
+            BigInteger amount_claim = amount_byte.AsBigInteger();
+            if (amount_claim != amount) return Validator.Register(PUK);
 
             var balanceArgs = new object[] { me };
             var contract = (NEP5Contract)asset.ToDelegate();
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
-            if (balanceResult != amountX + amountC) return false;
+            if (balanceResult < amount) return Validator.Register(PUK);
 
             byte[] aiS = GetAssetInfo(asset);
-            if (aiS == null) return false;
+            if (aiS == null) return Validator.Register(PUK);
             BigInteger decimals = GetDecimals(aiS);
             BigInteger total = GetTotal(aiS);
-            if (total < amountC) return false;
-            SetAssetInfo(asset, decimals, total - amountC);
+            if (total < amount) return Validator.Register(PUK);
+            SetAssetInfo(asset, decimals, total - amount);
 
-            DelClaimInfo(claimer, asset);
+            DelClaimInfo(to, asset);
 
-            Claimed(claimer, asset, amountC);
+            Claimed(to, asset, amount);
             return true;
         }
         public static bool SetReturnAsset(byte[] asset)
