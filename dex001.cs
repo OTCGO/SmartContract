@@ -10,7 +10,6 @@ namespace Neo.SmartContract
 {
     public class DEX : Framework.SmartContract
     {
-        private static readonly byte[] PUK = { 3, 155, 44, 107, 138, 136, 56, 89, 91, 142, 188, 198, 123, 188, 133, 206, 199, 141, 128, 93, 86, 137, 14, 154, 13, 113, 188, 174, 137, 102, 67, 57, 214 };
         private static readonly byte[] GAS = { 231, 45, 40, 105, 121, 238, 108, 177, 183, 230, 93, 253, 223, 178, 227, 132, 16, 11, 141, 20, 142, 119, 88, 222, 66, 228, 22, 139, 113, 121, 44, 96 };
         public static readonly byte[] OWNER = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
@@ -26,11 +25,11 @@ namespace Neo.SmartContract
         private static readonly byte[] BYTE7 = { 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] BYTE8 = { 0, 0, 0, 0, 0, 0, 0, 0 };
         private static readonly byte[] RETURN_PREFIX = "RETURN".AsByteArray();
-        private static readonly byte[] CONVER = "CONVER".AsByteArray();
+        private static readonly byte[] STATUS = "STATUS".AsByteArray();
         public delegate object NEP5Contract(string method, object[] args);
 
-        [DisplayName("setconver")]
-        public static event Action<byte[]> ConverSetted;
+        [DisplayName("setstatus")]
+        public static event Action<byte[]> StatusSetted;
         [DisplayName("assetsupport")]
         public static event Action<byte[]> AssetSupported;
         [DisplayName("assetunsupport")]
@@ -79,16 +78,20 @@ namespace Neo.SmartContract
                 if (gas_input < gas_output) return false;
                 if (gas_input - gas_output > 2000000000) return false;
 
-                if (51 == itx.Script.Length) // deploy
+                byte storage_status = GetStatus();
+
+                if (29 == itx.Script.Length) // status
                 {
                     if (itx.Script[0] != 0x14) return false;
-                    if (itx.Script.Range(21, 10) != new byte[] { 0x51, 0xc1, 0x06, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x67 }) return false;
-                    if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
+                    if (itx.Script.Range(2, 7) != new byte[] { 0x51, 0xc1, 0x03, 0x73, 0x65, 0x74, 0x67 }) return false;
+                    if (itx.Script.Range(9, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-                    byte[] conver = GetConver();
-                    if (conver == null) return true;
-                    return false;
+                    byte status = itx.Script[1];
+                    if (status != 0x59 || status != 0x4e) return false;
+                    if (storage_status == status) return false;
+                    return true;
                 }
+                if (storage_status != 0x59) return false;
                 if (52 == itx.Script.Length) // support
                 {
                     if (itx.Script[0] != 0x14) return false;
@@ -265,39 +268,32 @@ namespace Neo.SmartContract
 
                     return true;
                 }
-
-                if (112 == itx.Script.Length) // return
+                if (51 == itx.Script.Length) // return
                 {
-                    if (itx.Script[0] != 0x08) return false;
-                    if (itx.Script[9] != 0x14) return false;
-                    if (itx.Script[30] != 0x14) return false;
-                    if (itx.Script.Range(51, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
-                    if (itx.Script.Range(83, 9) != new byte[] { 0x00, 0x06, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x76 }) return false;
-
-                    BigInteger amount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
-                    if (amount <= 0) return false;
-                    if (itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != OWNER) return false;
+                    if (itx.Script[0] != 0x14) return false;
+                    byte[] asset = itx.Script.Range(1, LENGTH_OF_SCRIPTHASH);
+                    if (itx.Script.Range(21, 10) != new byte[] { 0x51, 0xc1, 0x06, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x67 }) return false;
                     if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
-                    byte[] asset = itx.Script.Range(63, LENGTH_OF_SCRIPTHASH);
-                    if (itx.Script.Range(92, LENGTH_OF_SCRIPTHASH) != me) return false;
 
-                    BigInteger delta = GetReturnAmount(asset);
-                    if (delta != amount) return false;
-
+                    byte[] ai = GetAssetInfo(asset);
+                    if (ai == null) return false;
+                    byte[] amount_byte = GetClaimInfo(OWNER, asset);
+                    if (amount_byte != null) return false;
                     return true;
                 }
+
                 return false;
             }
             else if (Runtime.Trigger == TriggerType.Application)
             {
                 byte[] callscript = ExecutionEngine.CallingScriptHash;
                 if (ExecutionEngine.EntryScriptHash.AsBigInteger() != callscript.AsBigInteger()) return false;
-                if (operation == "deploy")
+                if (operation == "set")
                 {
-                    // set conver
+                    // set Y|N
                     if (args.Length != 1) return false;
-                    byte[] conver = (byte[])args[0];
-                    return Deploy(conver);
+                    byte[] status = (byte[])args[0];
+                    return Deploy(status);
                 }
                 if (operation == "support")
                 {
@@ -337,18 +333,12 @@ namespace Neo.SmartContract
                     if (args.Length != 1) return false;
                     return Claiming();
                 }
-                if (operation == "setreturn")
+                if (operation == "return")
                 {
                     // return asset to OWNER
                     if (args.Length != 1) return false;
                     byte[] asset = (byte[])args[0];
                     return SetReturnAsset(asset);
-                }
-                if (operation == "return")
-                {
-                    // return asset to OWNER
-                    if (args.Length != 0) return false;
-                    return ReturnAsset();
                 }
             }
             return false;
@@ -482,17 +472,18 @@ namespace Neo.SmartContract
             }
             return info.Range(8, 8).AsBigInteger();
         }
-        private static bool SetConver(byte[] conver)
+        private static bool SetStatus(byte[] status)
         {
-            if (conver.Length != LENGTH_OF_SCRIPTHASH) return false;
-            Storage.Put(Storage.CurrentContext, CONVER, conver);
+            if (status.Length != 1) return false;
+            if (status[0] != 0x59 || status[0] != 0x4e) return false; // Y|N
+            Storage.Put(Storage.CurrentContext, STATUS, status);
             return true;
         }
-        private static byte[] GetConver()
+        private static byte GetStatus()
         {
-            byte[] conver = Storage.Get(Storage.CurrentContext, CONVER);
-            if (conver.Length != LENGTH_OF_SCRIPTHASH) return null;
-            return conver;
+            byte[] status = Storage.Get(Storage.CurrentContext, STATUS);
+            if (status.Length != 1) return 0x00;
+            return status[0];
         }
         private static bool SetReturnAmount(byte[] asset, BigInteger delta)
         {
@@ -513,17 +504,18 @@ namespace Neo.SmartContract
             return true;
         }
 
-        public static bool Deploy(byte[] conver)
+        public static bool Deploy(byte[] status)
         {
             if (!Runtime.CheckWitness(OWNER)) return false;
 
-            byte[] cr = GetConver();
-            if (cr == null)
+            byte cr = GetStatus();
+            if (cr == status[0]) return false;
+            else
             {
-                bool sc = SetConver(conver);
-                if (sc == true)
+                bool s = SetStatus(status);
+                if (s == true)
                 {
-                    ConverSetted(conver);
+                    StatusSetted(status);
                     return true;
                 }
             }
@@ -677,9 +669,9 @@ namespace Neo.SmartContract
         }
         private static bool UseUpGas()
         {
-            foreach (byte b in OWNER)
+            foreach (byte b in GAS)
             {
-                Storage.Put(Storage.CurrentContext, PUK, RETURN_PREFIX);
+                Storage.Put(Storage.CurrentContext, GAS, GAS.Concat(GAS).Concat(GAS).Concat(GAS));
             }
             return true;
         }
@@ -717,46 +709,23 @@ namespace Neo.SmartContract
         public static bool SetReturnAsset(byte[] asset)
         {
             byte[] me = GetReceiver();
-            if (!Runtime.CheckWitness(OWNER)) return false;
             if (asset.Length != LENGTH_OF_SCRIPTHASH) return false;
 
             BigInteger total = 0;
             byte[] ai = GetAssetInfo(asset);
-            if (ai != null) total = GetTotal(ai);
+            if (ai == null) return false;
+            total = GetTotal(ai);
             var balanceArgs = new object[] { me };
             var contract = (NEP5Contract)asset.ToDelegate();
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
             if (balanceResult <= total) return false;
 
+            byte[] amount_byte = GetClaimInfo(OWNER, asset);
+            if (amount_byte != null) return false;
+
             BigInteger delta = balanceResult - total;
-            SetReturnAmount(asset, delta);
+            SetClaimInfo(OWNER, asset, delta);
             ReturnSet(asset, delta);
-            return true;
-        }
-        public static bool ReturnAsset()
-        {
-            byte[] me = GetReceiver();
-            var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
-            if (112 != itx.Script.Length) return false;
-            if (itx.Script[0] != 0x08) return false;
-            if (itx.Script[9] != 0x14) return false;
-            if (itx.Script[30] != 0x14) return false;
-            if (itx.Script.Range(51, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
-            if (itx.Script.Range(83, 9) != new byte[] { 0x00, 0x06, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x76 }) return false;
-
-            BigInteger amount = itx.Script.Range(1, LENGTH_OF_AMOUNT).AsBigInteger();
-            if (amount <= 0) return false;
-            if (itx.Script.Range(10, LENGTH_OF_SCRIPTHASH) != OWNER) return false;
-            if (itx.Script.Range(31, LENGTH_OF_SCRIPTHASH) != me) return false;
-            byte[] asset = itx.Script.Range(63, LENGTH_OF_SCRIPTHASH);
-            if (itx.Script.Range(92, LENGTH_OF_SCRIPTHASH) != me) return false;
-            if (!Runtime.CheckWitness(me)) return false;
-
-            BigInteger delta = GetReturnAmount(asset);
-            if (delta != amount) return false;
-
-            DelReturnAmount(asset);
-            Returned(asset, amount);
             return true;
         }
     }
