@@ -10,7 +10,7 @@ namespace Neo.SmartContract
 {
     public class DEX : Framework.SmartContract
     {
-		private static readonly byte[] PUK = { 3, 155, 44, 107, 138, 136, 56, 89, 91, 142, 188, 198, 123, 188, 133, 206, 199, 141, 128, 93, 86, 137, 14, 154, 13, 113, 188, 174, 137, 102, 67, 57, 214 };
+        private static readonly byte[] PUK = { 3, 155, 44, 107, 138, 136, 56, 89, 91, 142, 188, 198, 123, 188, 133, 206, 199, 141, 128, 93, 86, 137, 14, 154, 13, 113, 188, 174, 137, 102, 67, 57, 214 };
         private static readonly byte[] GAS = { 231, 45, 40, 105, 121, 238, 108, 177, 183, 230, 93, 253, 223, 178, 227, 132, 16, 11, 141, 20, 142, 119, 88, 222, 66, 228, 22, 139, 113, 121, 44, 96 };
         public static readonly byte[] OWNER = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
@@ -65,7 +65,7 @@ namespace Neo.SmartContract
                 {
                     if (output.AssetId == GAS)
                     {
-                         gas_input += (ulong)output.Value;
+                        gas_input += (ulong)output.Value;
                     }
                 }
                 TransactionOutput[] outputs = tx.GetOutputs();
@@ -76,7 +76,8 @@ namespace Neo.SmartContract
                         gas_output += (ulong)output.Value;
                     }
                 }
-                if (gas_input - gas_output > 5000000000) return false;
+                if (gas_input < gas_output) return false;
+                if (gas_input - gas_output > 2000000000) return false;
 
                 if (51 == itx.Script.Length) // deploy
                 {
@@ -231,6 +232,38 @@ namespace Neo.SmartContract
 
                     if (amount > 0) return true;
                     return false;
+                }
+                if (112 == itx.Script.Length) // claim
+                {
+                    if (itx.Script.Range(0, 9) != new byte[] { 0x00, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67 }) return false;
+                    if (itx.Script.Range(9, LENGTH_OF_SCRIPTHASH) != me) return false;
+                    if (itx.Script[29] != 0x08) return false;
+                    if (itx.Script[38] != 0x14) return false;
+                    if (itx.Script[59] != 0x14) return false;
+                    if (itx.Script.Range(60, LENGTH_OF_SCRIPTHASH) != me) return false;
+                    if (itx.Script.Range(80, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return false;
+
+                    BigInteger amount = itx.Script.Range(30, LENGTH_OF_AMOUNT).AsBigInteger();
+                    if (amount <= 0) return false;
+
+                    byte[] to = itx.Script.Range(39, LENGTH_OF_SCRIPTHASH);
+                    if (to == me) return false;
+
+                    byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
+                    if (asset == me) return false;
+                    if (to == asset) return false;
+
+                    byte[] amount_byte = GetClaimInfo(to, asset);
+                    if (amount_byte == null) return false;
+                    BigInteger amount_claim = amount_byte.AsBigInteger();
+                    if (amount_claim != amount) return false;
+
+                    byte[] aiS = GetAssetInfo(asset);
+                    if (aiS == null) return false;
+                    BigInteger total = GetTotal(aiS);
+                    if (total < amount) return false;
+
+                    return true;
                 }
 
                 if (112 == itx.Script.Length) // return
@@ -413,7 +446,7 @@ namespace Neo.SmartContract
             Storage.Put(Storage.CurrentContext, claimInfo, old_amount + amount);
             return true;
         }
-		// get claim info
+        // get claim info
         private static byte[] GetClaimInfo(byte[] address, byte[] asset)
         {
             if (address.Length != LENGTH_OF_SCRIPTHASH) return null;
@@ -642,43 +675,38 @@ namespace Neo.SmartContract
             }
             return false;
         }
+        private static bool UseUpGas()
+        {
+            foreach (byte b in OWNER)
+            {
+                Storage.Put(Storage.CurrentContext, PUK, RETURN_PREFIX);
+            }
+            return true;
+        }
         public static bool Claiming()
         {
             byte[] me = GetReceiver();
             var itx = (InvocationTransaction)ExecutionEngine.ScriptContainer;
-            if (112 != itx.Script.Length) return Validator.Register(PUK);
-			if (itx.Script.Range(0, 9) != new byte[] { 0x00, 0xc1, 0x05, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x67 }) return Validator.Register(PUK);
-			if (itx.Script.Range(9, LENGTH_OF_SCRIPTHASH) != me) return Validator.Register(PUK);
-			if (itx.Script[29] != 0x08) return Validator.Register(PUK);
-			if (itx.Script[38] != 0x14) return Validator.Register(PUK);
-			if (itx.Script[59] != 0x14) return Validator.Register(PUK);
-			if (itx.Script.Range(60, LENGTH_OF_SCRIPTHASH) != me) return Validator.Register(PUK);
-            if (itx.Script.Range(80, 12) != new byte[] { 0x53, 0xc1, 0x08, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x66, 0x65, 0x72, 0x67 }) return Validator.Register(PUK);
 
-			BigInteger amount = itx.Script.Range(30, LENGTH_OF_AMOUNT).AsBigInteger();
-			if (amount <= 0)  return Validator.Register(PUK);
-
+            BigInteger amount = itx.Script.Range(30, LENGTH_OF_AMOUNT).AsBigInteger();
             byte[] to = itx.Script.Range(39, LENGTH_OF_SCRIPTHASH);
-            if (to == me) return Validator.Register(PUK);
-            if (!Runtime.CheckWitness(to)) return Validator.Register(PUK);
-
             byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
 
             byte[] amount_byte = GetClaimInfo(to, asset);
-            if (amount_byte == null) return Validator.Register(PUK);
+            if (amount_byte == null) return UseUpGas();
             BigInteger amount_claim = amount_byte.AsBigInteger();
-            if (amount_claim != amount) return Validator.Register(PUK);
+            if (amount_claim != amount) return UseUpGas();
 
             var balanceArgs = new object[] { me };
             var contract = (NEP5Contract)asset.ToDelegate();
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
-            if (balanceResult < amount) return Validator.Register(PUK);
+            if (balanceResult < amount) return UseUpGas();
 
             byte[] aiS = GetAssetInfo(asset);
-            if (aiS == null) return Validator.Register(PUK);
+            if (aiS == null) return UseUpGas();
             BigInteger decimals = GetDecimals(aiS);
             BigInteger total = GetTotal(aiS);
-            if (total < amount) return Validator.Register(PUK);
+            if (total < amount) return UseUpGas();
             SetAssetInfo(asset, decimals, total - amount);
 
             DelClaimInfo(to, asset);
