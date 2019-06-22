@@ -10,7 +10,6 @@ namespace Neo.SmartContract
 {
     public class DEX : Framework.SmartContract
     {
-        private static readonly byte[] GAS = { 231, 45, 40, 105, 121, 238, 108, 177, 183, 230, 93, 253, 223, 178, 227, 132, 16, 11, 141, 20, 142, 119, 88, 222, 66, 228, 22, 139, 113, 121, 44, 96 };
         public static readonly byte[] OWNER = "AUkVH4k8gPowAEpvQVAmNEkriX96CrKzk9".ToScriptHash();
         private static readonly byte INVOCATION_TRANSACTION_TYPE = 0xd1;
         private const int LENGTH_OF_SCRIPTHASH = 20;
@@ -56,27 +55,6 @@ namespace Neo.SmartContract
                 var type = tx.Type;
                 if (type != INVOCATION_TRANSACTION_TYPE) return false;
                 var itx = (InvocationTransaction)tx;
-
-                ulong gas_input = 0;
-                ulong gas_output = 0;
-                TransactionOutput[] reference = itx.GetReferences();
-                foreach (TransactionOutput output in reference)
-                {
-                    if (output.AssetId == GAS)
-                    {
-                        gas_input += (ulong)output.Value;
-                    }
-                }
-                TransactionOutput[] outputs = tx.GetOutputs();
-                foreach (TransactionOutput output in outputs)
-                {
-                    if (output.AssetId == GAS)
-                    {
-                        gas_output += (ulong)output.Value;
-                    }
-                }
-                if (gas_input < gas_output) return false;
-                if (gas_input - gas_output > 2000000000) return false;
 
                 byte storage_status = GetStatus();
 
@@ -565,7 +543,7 @@ namespace Neo.SmartContract
 
             byte[] assetB = itx.Script.Range(10, LENGTH_OF_SCRIPTHASH);
             byte[] aiB = GetAssetInfo(assetB);
-            if (aiB == null) return false;
+            if (aiB == null) return StopExecution();
 
             BigInteger amount = itx.Script.Range(58, LENGTH_OF_AMOUNT).AsBigInteger();
 
@@ -573,14 +551,14 @@ namespace Neo.SmartContract
 
             byte[] assetS = itx.Script.Range(120, LENGTH_OF_SCRIPTHASH);
             byte[] aiS = GetAssetInfo(assetS);
-            if (aiS == null) return false;
+            if (aiS == null) return StopExecution();
 
-            if (!Runtime.CheckWitness(from)) return false;
+            if (!Runtime.CheckWitness(from)) return StopExecution();
 
             var balanceArgs = new object[] { from };
             var contract = (NEP5Contract)assetS.ToDelegate();
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
-            if (amount > balanceResult) return false;
+            if (amount > balanceResult) return StopExecution();
 
             byte[] new_order = from.Concat(assetS).Concat(assetB).Concat(price);
             BigInteger old_amount = Storage.Get(Storage.CurrentContext, new_order).AsBigInteger();
@@ -667,13 +645,10 @@ namespace Neo.SmartContract
             }
             return false;
         }
-        private static bool UseUpGas()
+        private static bool StopExecution()
         {
-            foreach (byte b in GAS)
-            {
-                Storage.Put(Storage.CurrentContext, GAS, GAS.Concat(GAS).Concat(GAS).Concat(GAS));
-            }
-            return true;
+            throw new InvalidOperationException("The parameter address SHOULD NOT be null.");
+            return false;
         }
         public static bool Claiming()
         {
@@ -685,20 +660,20 @@ namespace Neo.SmartContract
             byte[] asset = itx.Script.Range(96, LENGTH_OF_SCRIPTHASH);
 
             byte[] amount_byte = GetClaimInfo(to, asset);
-            if (amount_byte == null) return UseUpGas();
+            if (amount_byte == null) return StopExecution();
             BigInteger amount_claim = amount_byte.AsBigInteger();
-            if (amount_claim != amount) return UseUpGas();
+            if (amount_claim != amount) return StopExecution();
 
             var balanceArgs = new object[] { me };
             var contract = (NEP5Contract)asset.ToDelegate();
             BigInteger balanceResult = (BigInteger)contract("balanceOf", balanceArgs);
-            if (balanceResult < amount) return UseUpGas();
+            if (balanceResult < amount) return StopExecution();
 
             byte[] aiS = GetAssetInfo(asset);
-            if (aiS == null) return UseUpGas();
+            if (aiS == null) return StopExecution();
             BigInteger decimals = GetDecimals(aiS);
             BigInteger total = GetTotal(aiS);
-            if (total < amount) return UseUpGas();
+            if (total < amount) return StopExecution();
             SetAssetInfo(asset, decimals, total - amount);
 
             DelClaimInfo(to, asset);
