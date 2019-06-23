@@ -170,20 +170,20 @@ namespace Neo.SmartContract
                     byte[] aiS = GetAssetInfo(assetS);
                     if (aiS == null) return false;
                     BigInteger decimalsS = GetDecimals(aiS);
-                    if (decimalsS < 0) return false;
+                    if (decimalsS < 0 || decimalsS > 8) return false;
                     BigInteger totalS = GetTotal(aiS);
                     if (totalS < takerAmount) return false;
 
                     byte[] aiB = GetAssetInfo(assetB);
                     if (aiB == null) return false;
                     BigInteger decimalsB = GetDecimals(aiB);
-                    if (decimalsB < 0) return false;
+                    if (decimalsB < 0 || decimalsB > 8) return false;
                     BigInteger totalB = GetTotal(aiB);
                     if (totalB < makerAmount) return false;
 
                     if (takerPrice * makerPrice > 10000000000000000) return false;
-                    if (makerPrice * makerAmount * decimalsS != takerAmount * decimalsB) return false;
-                    if (takerPrice * takerAmount * decimalsB > makerAmount * decimalsS) return false;
+                    if (makerPrice * makerAmount * BigInteger.Pow(10, (int)decimalsS) != takerAmount * BigInteger.Pow(10, (int)decimalsB)) return false;
+                    if (takerPrice * takerAmount * BigInteger.Pow(10, (int)decimalsB) > makerAmount * BigInteger.Pow(10, (int)decimalsS)) return false;
 
                     return true;
                 }
@@ -388,6 +388,7 @@ namespace Neo.SmartContract
         {
             if (asset.Length != LENGTH_OF_SCRIPTHASH) return false;
             if (decimals < 0) return false;
+            if (decimals > 8) return false;
             if (total < 0) return false;
             byte[] d8 = GetFixed8(decimals);
             byte[] t8 = GetFixed8(total);
@@ -647,7 +648,7 @@ namespace Neo.SmartContract
         }
         private static bool StopExecution()
         {
-            throw new InvalidOperationException("The parameter address SHOULD NOT be null.");
+            throw new InvalidOperationException("Stop Execution.");
             return false;
         }
         public static bool Claiming()
