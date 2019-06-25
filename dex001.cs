@@ -60,7 +60,7 @@ namespace Neo.SmartContract
 
                 if (29 == itx.Script.Length) // status
                 {
-                    if (itx.Script[0] != 0x14) return false;
+                    if (itx.Script[0] != 0x01) return false;
                     if (itx.Script.Range(2, 7) != new byte[] { 0x51, 0xc1, 0x03, 0x73, 0x65, 0x74, 0x67 }) return false;
                     if (itx.Script.Range(9, LENGTH_OF_SCRIPTHASH) != me) return false;
 
