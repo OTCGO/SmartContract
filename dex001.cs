@@ -451,13 +451,6 @@ namespace Neo.SmartContract
             }
             return info.Range(8, 8).AsBigInteger();
         }
-        private static bool SetStatus(byte[] status)
-        {
-            if (status.Length != 1) return false;
-            if (status[0] != 0x59 || status[0] != 0x4e) return false; // Y|N
-            Storage.Put(Storage.CurrentContext, STATUS, status);
-            return true;
-        }
         private static byte GetStatus()
         {
             byte[] status = Storage.Get(Storage.CurrentContext, STATUS);
@@ -486,19 +479,9 @@ namespace Neo.SmartContract
         public static bool Deploy(byte[] status)
         {
             if (!Runtime.CheckWitness(OWNER)) return false;
-
-            byte cr = GetStatus();
-            if (cr == status[0]) return false;
-            else
-            {
-                bool s = SetStatus(status);
-                if (s == true)
-                {
-                    StatusSetted(status);
-                    return true;
-                }
-            }
-            return false;
+            Storage.Put(Storage.CurrentContext, STATUS, status);
+            StatusSetted(status);
+            return true;
         }
         public static bool SupportAsset(byte[] asset)
         {
